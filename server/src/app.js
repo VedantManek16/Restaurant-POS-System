@@ -1,34 +1,21 @@
 import express from "express"
+import config from "./config/config.js";
+import connectDB from "./config/db.js";
 import gloabalErrorHandler from "./middleware/globalErrorHandler.js"
-import createHttpError from "http-errors";
 
+connectDB();
+const PORT = config.PORT || 8000;
 const app = express();
 
 app.use(express.json());
 
-app.get("/",(req,res) => {
-    // const err = createHttpError(404,"something went wrong!")
-    // throw err;
-
-    res.json({message:"Restaurant POS API is running"})
-});
-
-// Test Error Route
-app.get("/error", (req, res, next) => {
-
-    // Creates error object
-    const error = createHttpError(401, "Unauthorized Access");
-
-    next(error);
-});
-
-
-// 404 Route Handler
-app.use((req, res, next) => {
-    next(createHttpError(404, "Route Not Found"));
+app.get("/", (req, res) => {
+    res.json({ message: "Restaurant POS API is running" })
 });
 
 //Golbal error handler
-app.use(gloabalErrorHandler)
+app.use(gloabalErrorHandler);
 
-export default app;
+app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+});

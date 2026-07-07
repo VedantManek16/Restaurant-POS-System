@@ -1,20 +1,22 @@
 import { FaCircle, FaChair } from "react-icons/fa";
 import { getInitials } from "../../utils/getInitials";
 import { useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import { updateTable } from "../../redux/slices/customerSlice";
 const TableCard = ({ name, status, initials, seats, id }) => {
     const navigate = useNavigate();
     const isBooked = status?.toLowerCase() === "booked";
-    const handleClick = () => {
+    const dispatch = useDispatch();
+    const handleClick = (name) => {
         if (isBooked) {
-            // navigate(`/tables/${id}`);
-            console.log("Booked table ahe");
             return "";
         } else {
+            dispatch(updateTable({ tableNumber: name }))
             navigate(`/menu`);
         }
     };
     return (
-        <div onClick={handleClick} className="w-full max-w-[340px] bg-[#1a1a1a] p-4 rounded-xl border border-[#2d2d2d]/30 shadow-md flex flex-col hover:bg-[#202020] transition-colors duration-200">
+        <div onClick={() => handleClick(name)} className="w-full max-w-[340px] bg-[#1a1a1a] p-4 rounded-xl border border-[#2d2d2d]/30 shadow-md flex flex-col hover:bg-[#202020] transition-colors duration-200">
             {/* Header info */}
             <div className="flex items-center justify-between">
                 <h1 className="text-[#f5f5f5] text-sm font-semibold tracking-wide">{name}</h1>

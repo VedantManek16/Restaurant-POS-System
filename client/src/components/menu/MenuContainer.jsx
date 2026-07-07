@@ -1,74 +1,51 @@
 import { menus } from "@/constants";
 import { useState } from "react";
-import { GrRadialSelected } from "react-icons/gr";
+import CategoryList from "./CategoryList";
+import MenuItemGrid from "./MenuItemGrid";
+import { useSelector, useDispatch } from "react-redux";
+import { addItem, removeItem } from "../../redux/slices/cartSlice";
 
 const MenuContainer = () => {
     const [selected, setSelected] = useState(menus[0]);
-    const [count, setCount] = useState(0);
+    const dispatch = useDispatch();
+    const cartItems = useSelector((state) => state.cart.cartItems);
 
-    const increment = () => {
+    // Map cartItems to quantities object matching the structure: { "menuId-itemId": quantity }
+    const quantities = cartItems.reduce((acc, item) => {
+        const key = `${item.menuId}-${item.id}`;
+        acc[key] = item.quantity;
+        return acc;
+    }, {});
 
-        setCount((prev) => prev + 1);
+    const increment = (menuId, itemId) => {
+        const menu = menus.find((m) => m.id === menuId);
+        const item = menu?.items.find((i) => i.id === itemId);
+        if (item) {
+            dispatch(addItem({ item, menuId }));
+        }
     };
 
-    const decrement = () => {
-        if (count <= 0) return;
-        setCount((prev) => prev - 1);
+    const decrement = (menuId, itemId) => {
+        dispatch(removeItem({ itemId, menuId }));
     };
+
     return (
-        <>
-            <div className="grid grid-cols-4 gap-4 px-10 py-4 w-[100%]">
-                {
-                    menus.map((menu) => {
-                        return (
-                            <div key={menu.id} onClick={() => setSelected(menu)} className="flex flex-col items-start justify-between p-4 rounded-lg h-[100px] cursor-pointer" style={{ backgroundColor: menu.bgColor }}>
-                                <div className="flex items-center justify-between w-full">
-                                    <h1 className="text-[#f5f5f5] text-lg font-semibold">
-                                        {menu.icon} {menu.name}
-                                    </h1>
-                                    {selected.id === menu.id && (
-                                        <GrRadialSelected className="text-white" size={20} />
-                                    )}
-                                </div>
-                                <p className="text-[#ababab] text-sm font-semibold">
-                                    {menu.items.length} Items
-                                </p>
-                            </div>
-                        )
-                    })
-                }
-            </div>
-            <hr className="border-[#2a2a2a] border-t-2 mt-4" />
-            <div className="grid grid-cols-4 gap-4 px-10 py-4 w-[100%]">
-                {
-                    selected?.items.map((item) => {
-                        return (
-                            <div
-                                key={item.id}
-                                className="flex flex-col items-start justify-between p-4 rounded-lg h-[150px] cursor-pointer hover:bg-[#2a2a2a] bg-[#1a1a1a]"
-                            >
-                                <div className="flex items-start justify-between w-full">
-                                    <h1 className="text-[#f5f5f5] text-lg font-semibold">
-                                        {item.name}
-                                    </h1>
-                                </div>
-                                <div className="flex items-center justify-between w-full">
-                                    <p className="text-[#f5f5f5] text-xl font-bold">
-                                        ₹{item.price}
-                                    </p>
-                                    <div className="flex items-center justify-between bg-[#141414] border border-[#2d2d2d]/80 px-4 py-2.5 rounded-xl">
-                                        <button onClick={decrement} className="text-xl font-bold text-[#f6b100] hover:text-yellow-400 transition-colors cursor-pointer select-none">&minus;</button>
-                                        <span className="text-xs font-semibold text-[#f5f5f5]">{count} </span>
-                                        <button onClick={increment} className="text-xl font-bold text-[#f6b100] hover:text-yellow-400 transition-colors cursor-pointer select-none">&#43;</button>
-                                    </div>
-                                </div>
-                            </div>
-                        )
-                    })
-                }
-            </div>
-        </>
-    )
-}
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+            <CategoryList
+                menus={menus}
+                selectedMenuId={selected.id}
+                onSelectMenu={setSelected}
+            />
+            <hr className="border-[#2d2d2d]/60 border-t-2 mt-4 mx-10 shrink-0" />
+            <MenuItemGrid
+                items={selected?.items}
+                selectedMenuId={selected.id}
+                quantities={quantities}
+                onIncrement={increment}
+                onDecrement={decrement}
+            />
+        </div>
+    );
+};
 
 export default MenuContainer;

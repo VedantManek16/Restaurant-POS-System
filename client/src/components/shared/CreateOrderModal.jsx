@@ -1,13 +1,17 @@
 import { useState } from "react";
+import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
+import { setCustomerDetails } from "../../redux/slices/customerSlice";
 import Modal from "./Modal";
 import { PhoneInput } from "@/components/ui/phone-input";
 
+
 const CreateOrderModal = ({ isOpen, onClose }) => {
     const navigate = useNavigate();
+    const dispatch = useDispatch();
     const [guestCount, setGuestCount] = useState(0);
-    const [phoneNumber, setPhoneNumber] = useState("");
-
+    const [name, setName] = useState("");
+    const [phone, setPhone] = useState("");
     const increment = () => {
         if (guestCount >= 6) return;
         setGuestCount((prev) => prev + 1);
@@ -18,13 +22,20 @@ const CreateOrderModal = ({ isOpen, onClose }) => {
         setGuestCount((prev) => prev - 1);
     };
 
+    const handleCreateOrder = () => {
+        onClose();
+        // send the data to store
+        dispatch(setCustomerDetails({ name, phone, guests: guestCount }));
+        navigate("/tables");
+    }
+
     return (
         <Modal isOpen={isOpen} onClose={onClose} title="Create Order">
             <div className="flex flex-col gap-4">
                 <div>
                     <label className="block text-[11px] font-semibold text-[#ababab] uppercase tracking-wider mb-2">Customer Name</label>
                     <div className="flex items-center rounded-xl p-3 bg-[#141414] border border-[#2d2d2d]/80 focus-within:border-[#f6b100]/50 transition-colors">
-                        <input
+                        <input value={name} onChange={(e) => setName(e.target.value)}
                             type="text"
                             placeholder="Enter customer name"
                             className="bg-transparent flex-1 text-xs! text-[#f5f5f5] placeholder:text-xs! placeholder-[#555] focus:outline-none w-full"
@@ -34,8 +45,8 @@ const CreateOrderModal = ({ isOpen, onClose }) => {
                 <div>
                     <label className="block text-[11px] font-semibold text-[#ababab] uppercase tracking-wider mb-2">Customer Phone</label>
                     <PhoneInput
-                        value={phoneNumber}
-                        onChange={setPhoneNumber}
+                        value={phone}
+                        onChange={setPhone}
                         defaultCountry="IN"
                         placeholder="Enter phone number"
                     />
@@ -49,10 +60,7 @@ const CreateOrderModal = ({ isOpen, onClose }) => {
                     </div>
                 </div>
                 <button
-                    onClick={() => {
-                        onClose();
-                        navigate("/tables");
-                    }}
+                    onClick={handleCreateOrder}
                     className="w-full mt-4 bg-[#f6b100] text-[#1a1a1a] py-3 rounded-xl hover:bg-[#e0a100] active:scale-[0.98] transition-all font-bold text-xs tracking-wider uppercase cursor-pointer"
                 >
                     Create Order
