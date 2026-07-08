@@ -98,26 +98,24 @@ const Bill = () => {
                 <button
                     onClick={() => setPaymentMethod("Cash")}
                     disabled={cartItems.length === 0}
-                    className={`flex-1 py-2.5 rounded-xl font-semibold text-sm transition-all border ${
-                        cartItems.length === 0
+                    className={`flex-1 py-2.5 rounded-xl font-semibold text-sm transition-all border ${cartItems.length === 0
                             ? "bg-[#1a1a1a]/40 border-[#2d2d2d]/20 text-[#666666] cursor-not-allowed opacity-50"
                             : paymentMethod === "Cash"
                                 ? "bg-[#f6b100]/10 border-[#f6b100] text-[#f6b100] cursor-pointer"
                                 : "bg-[#1a1a1a] border-[#2d2d2d]/60 text-[#ababab] hover:bg-[#222222] cursor-pointer"
-                    }`}
+                        }`}
                 >
                     Cash
                 </button>
                 <button
                     onClick={() => setPaymentMethod("Online")}
                     disabled={cartItems.length === 0}
-                    className={`flex-1 py-2.5 rounded-xl font-semibold text-sm transition-all border ${
-                        cartItems.length === 0
+                    className={`flex-1 py-2.5 rounded-xl font-semibold text-sm transition-all border ${cartItems.length === 0
                             ? "bg-[#1a1a1a]/40 border-[#2d2d2d]/20 text-[#666666] cursor-not-allowed opacity-50"
                             : paymentMethod === "Online"
                                 ? "bg-[#f6b100]/10 border-[#f6b100] text-[#f6b100] cursor-pointer"
                                 : "bg-[#1a1a1a] border-[#2d2d2d]/60 text-[#ababab] hover:bg-[#222222] cursor-pointer"
-                    }`}
+                        }`}
                 >
                     Online
                 </button>
@@ -125,25 +123,23 @@ const Bill = () => {
 
             {/* Order Action Buttons */}
             <div className="flex items-center gap-3 mt-4">
-                <button 
+                <button
                     onClick={handlePrintReceipt}
                     disabled={cartItems.length === 0}
-                    className={`flex-1 py-3 rounded-xl font-semibold text-sm transition-all text-center border ${
-                        cartItems.length === 0
+                    className={`flex-1 py-3 rounded-xl font-semibold text-sm transition-all text-center border ${cartItems.length === 0
                             ? "bg-[#025cca]/5 border-[#025cca]/10 text-[#555] cursor-not-allowed opacity-50"
                             : "bg-[#025cca]/10 hover:bg-[#025cca]/20 border-[#025cca]/30 text-[#025cca] hover:text-white cursor-pointer active:scale-98"
-                    }`}
+                        }`}
                 >
                     Print Receipt
                 </button>
-                <button 
+                <button
                     onClick={handlePlaceOrder}
                     disabled={cartItems.length === 0}
-                    className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all text-center ${
-                        cartItems.length === 0
+                    className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all text-center ${cartItems.length === 0
                             ? "bg-[#2d2d2d] text-[#666] cursor-not-allowed opacity-50"
                             : "bg-[#f6b100] hover:bg-[#f6b100]/90 text-[#1f1f1f] cursor-pointer active:scale-98 shadow-md shadow-[#f6b100]/5"
-                    }`}
+                        }`}
                 >
                     Place Order
                 </button>

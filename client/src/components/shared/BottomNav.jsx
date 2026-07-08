@@ -24,8 +24,8 @@ const BottomNav = () => {
         <div className="fixed bottom-0 left-0 right-0 bg-[#1e1e1e] border-t border-[#2d2d2d]/30 px-6 h-16 flex items-center justify-around z-50">
             {/* 1. Home */}
             <button
-                onClick={() => navigate("/")}
-                className={`flex items-center justify-center gap-2 px-4 py-2 rounded-full border transition-all cursor-pointer ${isActive("/")}`}
+                onClick={() => navigate("/dashboard")}
+                className={`flex items-center justify-center gap-2 px-4 py-2 rounded-full border transition-all cursor-pointer ${isActive("/dashboard")}`}
             >
                 <FaHome size={16} />
                 <span className="text-xs">Home</span>

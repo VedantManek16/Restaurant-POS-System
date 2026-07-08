@@ -1,19 +1,35 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom"
-import { Home, Auth, Orders, Tables, Menu } from "./pages"
+import { BrowserRouter as Router, Routes, Route, Outlet } from "react-router-dom"
+import { Landing, Home, Auth, Orders, Tables, Menu, NotFound } from "./pages"
 import Header from "./components/shared/Header"
+
+const DashboardLayout = () => {
+  return (
+    <>
+      <Header />
+      <Outlet />
+    </>
+  )
+}
 
 const App = () => {
   return (
     <>
       <Router>
-        <Header />
         <Routes>
-          <Route path="/" element={<Home />} />
+          {/* Public Routes */}
+          <Route path="/" element={<Landing />} />
           <Route path="/auth" element={<Auth />} />
-          <Route path="/orders" element={<Orders />} />
-          <Route path="/tables" element={<Tables />} />
-          <Route path="/menu" element={<Menu />} />
-          <Route path="*" element={<h1>404 Not Found</h1>} />
+
+          {/* Protected Dashboard Routes */}
+          <Route element={<DashboardLayout />}>
+            <Route path="/dashboard" element={<Home />} />
+            <Route path="/orders" element={<Orders />} />
+            <Route path="/tables" element={<Tables />} />
+            <Route path="/menu" element={<Menu />} />
+          </Route>
+
+          {/* Wildcard Route */}
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </Router>
     </>
