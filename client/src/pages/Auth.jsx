@@ -71,16 +71,16 @@ const Auth = () => {
                 {/* Background decorative blob */}
                 <div className="absolute top-1/4 right-1/4 w-96 h-96 bg-yellow-500/5 rounded-full blur-3xl pointer-events-none"></div>
                 
-                <div className="w-full max-w-[380px] bg-[#1e1e1e] p-6 md:p-8 rounded-2xl border border-white/5 shadow-2xl relative z-10">
-                    <div className="flex flex-col items-center gap-2 mb-5">
-                        <div className="p-1.5 rounded-xl bg-yellow-400/10 border border-yellow-400/20 shadow-inner">
-                            <img src={logo} alt="Restro Logo" className="h-10 w-10 object-contain" />
+                <div className="w-full max-w-[380px] bg-[#1e1e1e] p-5 md:p-6 rounded-2xl border border-white/5 shadow-2xl relative z-10 my-4">
+                    <div className="flex flex-col items-center gap-1.5 mb-3.5">
+                        <div className="p-1 rounded-xl bg-yellow-400/10 border border-yellow-400/20 shadow-inner">
+                            <img src={logo} alt="Restro Logo" className="h-8 w-8 object-contain" />
                         </div>
-                        <h1 className="text-xl font-bold text-white tracking-wide">RestroDesk</h1>
-                        <p className="text-[10px] text-gray-400 text-center">Modern Restaurant Point of Sale System</p>
+                        <h1 className="text-lg font-extrabold text-white tracking-wide">RestroDesk</h1>
+                        <p className="text-[9px] text-gray-500 text-center">Modern Restaurant Point of Sale System</p>
                     </div>
 
-                    <h2 className="text-2xl text-center font-bold text-white tracking-tight mb-5">
+                    <h2 className="text-xl text-center font-black text-white tracking-tight mb-4">
                         {isRegister ? "Create Account" : "Welcome Back"}
                     </h2>
 
@@ -93,7 +93,7 @@ const Auth = () => {
                         )}
                     </div>
 
-                    <div className="flex justify-center mt-6 pt-4 border-t border-white/5">
+                    <div className="flex justify-center mt-4 pt-3 border-t border-white/5">
                         <p className="text-xs text-gray-400">
                             {isRegister ? "Already have an account?" : "Don't have an employee account?"}{" "}
                             <button 

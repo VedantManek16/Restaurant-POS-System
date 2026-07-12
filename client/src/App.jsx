@@ -1,13 +1,26 @@
-import { BrowserRouter as Router, Routes, Route, Outlet, Navigate } from "react-router-dom"
+import { useState } from "react"
+import { BrowserRouter as Router, Routes, Route, Outlet, Navigate, useLocation } from "react-router-dom"
 import { useSelector } from "react-redux"
-import { Landing, Home, Auth, Orders, Tables, Menu, NotFound } from "./pages"
+import { Landing, Home, Auth, Orders, Tables, Menu, NotFound, AccessDenied, Staff, Settings, Reports } from "./pages"
 import Header from "./components/shared/Header"
+import Sidebar from "./components/shared/Sidebar"
+import { ROUTE_ACCESS } from "./constants/roles"
 
 const ProtectedRoute = ({ children }) => {
   const { user } = useSelector((state) => state.user)
+  const location = useLocation()
+
   if (!user) {
     return <Navigate to="/auth" replace />
   }
+
+  const path = location.pathname
+  const allowedRoles = ROUTE_ACCESS[path]
+
+  if (allowedRoles && !allowedRoles.includes(user.role)) {
+    return <Navigate to="/403" replace />
+  }
+
   return children ? children : <Outlet />
 }
 
@@ -20,11 +33,36 @@ const AuthRoute = ({ children }) => {
 }
 
 const DashboardLayout = () => {
+  const location = useLocation();
+  const isScrollbarHiddenPage = ["/403", "/staff", "/dashboard"].includes(location.pathname);
+
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
+    return localStorage.getItem("sidebarCollapsed") === "true";
+  });
+
+  const toggleSidebar = () => {
+    setIsSidebarCollapsed((prev) => {
+      localStorage.setItem("sidebarCollapsed", !prev);
+      return !prev;
+    });
+  };
+
   return (
-    <>
-      <Header />
-      <Outlet />
-    </>
+    <div className="flex h-screen w-full bg-[#121212] overflow-hidden text-white">
+      {/* Sidebar Navigation */}
+      <Sidebar isCollapsed={isSidebarCollapsed} toggleSidebar={toggleSidebar} />
+      
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden transition-all duration-300">
+        {/* Header */}
+        <Header toggleSidebar={toggleSidebar} isSidebarCollapsed={isSidebarCollapsed} />
+        
+        {/* Page Content */}
+        <div className={`flex-1 overflow-y-auto relative pb-16 md:pb-0 ${isScrollbarHiddenPage ? "scrollbar-hide" : ""}`}>
+          <Outlet />
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -43,6 +81,10 @@ const App = () => {
             <Route path="/orders" element={<Orders />} />
             <Route path="/tables" element={<Tables />} />
             <Route path="/menu" element={<Menu />} />
+            <Route path="/staff" element={<Staff />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/reports" element={<Reports />} />
+            <Route path="/403" element={<AccessDenied />} />
           </Route>
 
           {/* Wildcard Route */}

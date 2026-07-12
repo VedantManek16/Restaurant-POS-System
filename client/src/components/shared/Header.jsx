@@ -4,15 +4,21 @@ import logo from "../../assets/logo.png";
 import { useSelector, useDispatch } from "react-redux";
 import { logoutUser } from "../../redux/slices/userSlice";
 import { useNavigate } from "react-router-dom";
+import { apiRequest } from "../../utils/api";
 
-const Header = () => {
+const Header = ({ toggleSidebar, isSidebarCollapsed }) => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.user);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await apiRequest("/user/logout", { method: "POST" });
+    } catch (error) {
+      console.error("Logout API error:", error);
+    }
     dispatch(logoutUser());
     navigate("/auth");
   };
@@ -29,19 +35,20 @@ const Header = () => {
 
   return (
     <header className="flex justify-between items-center px-8 py-3 bg-[#1a1a1a] border-b border-[#2d2d2d]/30 h-16 relative">
-      {/* Logo */}
+      {/* Brand / Logo */}
       <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2">
-          <img src={logo} alt="Logo" className="h-7 w-7 object-contain" />
-          <h1 className="text-md font-semibold text-[#f5f5f5] tracking-wide">RestroDesk</h1>
-        </div>
-        <div className="hidden sm:block h-4 w-[1px] bg-[#2d2d2d]"></div>
-        <div className="hidden sm:flex items-center gap-1.5 bg-[#262626] border border-white/5 px-2.5 py-1 rounded-full">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-          <span className="text-[10px] text-gray-300 font-semibold tracking-wide">
-            {user?.tenant || "Restro Main (Downtown)"}
-          </span>
-        </div>
+        {user?.role === "Super Admin" ? (
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-black text-white tracking-tight">Platform Dashboard</span>
+            <span className="text-[9px] bg-purple-500/10 border border-purple-500/20 text-purple-400 px-2 py-0.5 rounded-full font-bold uppercase ml-1">Admin</span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-extrabold text-white tracking-tight">{user?.tenantName || "Taste Hub"}</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse ml-1"></span>
+            <span className="text-[9px] text-[#ababab] font-bold uppercase tracking-wider">Restaurant Operator</span>
+          </div>
+        )}
       </div>
       
       {/* Search */}

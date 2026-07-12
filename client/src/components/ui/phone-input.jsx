@@ -26,7 +26,7 @@ const PhoneInput = React.forwardRef(
     return (
       <RPNInput.default
         ref={ref}
-        className={cn("flex rounded-xl bg-[#141414] border border-[#2d2d2d]/80 focus-within:border-[#f6b100]/50 transition-colors h-10 items-center overflow-hidden w-full", className)}
+        className={cn("flex rounded-xl bg-[#141414] border border-[#2d2d2d]/80 focus-within:border-[#f6b100]/50 transition-colors h-9 items-center overflow-hidden w-full", className)}
         flagComponent={FlagComponent}
         countrySelectComponent={CountrySelect}
         inputComponent={InputComponent}

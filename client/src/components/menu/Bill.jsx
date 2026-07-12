@@ -5,6 +5,9 @@ import { removeCustomerDetails } from "../../redux/slices/customerSlice";
 
 const Bill = () => {
     const dispatch = useDispatch();
+    const { user } = useSelector((state) => state.user);
+    const isWaiter = user?.role === "Waiter";
+    
     const [paymentMethod, setPaymentMethod] = useState(null);
     const cartItems = useSelector((state) => state.cart.cartItems);
     const customerData = useSelector((state) => state.customer);
@@ -18,7 +21,7 @@ const Bill = () => {
 
     const handlePlaceOrder = () => {
         if (cartItems.length === 0) return;
-        if (!paymentMethod) {
+        if (!isWaiter && !paymentMethod) {
             alert("Please select a payment method (Cash or Online) before placing the order.");
             return;
         }
@@ -28,13 +31,21 @@ const Bill = () => {
         const orderId = customerData?.orderId || "N/A";
 
         alert(
-            `🎉 Order Placed Successfully!\n\n` +
-            `Order ID: ${orderId}\n` +
-            `Customer: ${customerName}\n` +
-            `Table: ${tableNumber}\n` +
-            `Items Count: ${totalItems}\n` +
-            `Total Bill: ₹${totalWithTax.toFixed(2)} (${paymentMethod})\n\n` +
-            `Resetting session for next customer...`
+            isWaiter
+                ? `🚀 Order Sent to Kitchen Successfully!\n\n` +
+                  `Order ID: ${orderId}\n` +
+                  `Customer: ${customerName}\n` +
+                  `Table: ${tableNumber}\n` +
+                  `Items Count: ${totalItems}\n` +
+                  `Total Bill: ₹${totalWithTax.toFixed(2)} (Sent to Kitchen - Pending Cashier Payment)\n\n` +
+                  `Resetting session for next customer...`
+                : `🎉 Order Placed & Billed Successfully!\n\n` +
+                  `Order ID: ${orderId}\n` +
+                  `Customer: ${customerName}\n` +
+                  `Table: ${tableNumber}\n` +
+                  `Items Count: ${totalItems}\n` +
+                  `Total Bill: ₹${totalWithTax.toFixed(2)} (${paymentMethod})\n\n` +
+                  `Resetting session for next customer...`
         );
 
         // Reset POS session
@@ -93,55 +104,61 @@ const Bill = () => {
                 </div>
             </div>
 
-            {/* Payment Methods */}
-            <div className="flex items-center gap-3 mt-4">
-                <button
-                    onClick={() => setPaymentMethod("Cash")}
-                    disabled={cartItems.length === 0}
-                    className={`flex-1 py-2.5 rounded-xl font-semibold text-sm transition-all border ${cartItems.length === 0
-                            ? "bg-[#1a1a1a]/40 border-[#2d2d2d]/20 text-[#666666] cursor-not-allowed opacity-50"
-                            : paymentMethod === "Cash"
-                                ? "bg-[#f6b100]/10 border-[#f6b100] text-[#f6b100] cursor-pointer"
-                                : "bg-[#1a1a1a] border-[#2d2d2d]/60 text-[#ababab] hover:bg-[#222222] cursor-pointer"
-                        }`}
-                >
-                    Cash
-                </button>
-                <button
-                    onClick={() => setPaymentMethod("Online")}
-                    disabled={cartItems.length === 0}
-                    className={`flex-1 py-2.5 rounded-xl font-semibold text-sm transition-all border ${cartItems.length === 0
-                            ? "bg-[#1a1a1a]/40 border-[#2d2d2d]/20 text-[#666666] cursor-not-allowed opacity-50"
-                            : paymentMethod === "Online"
-                                ? "bg-[#f6b100]/10 border-[#f6b100] text-[#f6b100] cursor-pointer"
-                                : "bg-[#1a1a1a] border-[#2d2d2d]/60 text-[#ababab] hover:bg-[#222222] cursor-pointer"
-                        }`}
-                >
-                    Online
-                </button>
-            </div>
+            {/* Payment Methods (Hidden for Waiters) */}
+            {!isWaiter && (
+                <div className="flex items-center gap-3 mt-4">
+                    <button
+                        onClick={() => setPaymentMethod("Cash")}
+                        disabled={cartItems.length === 0}
+                        className={`flex-1 py-2.5 rounded-xl font-semibold text-sm transition-all border ${cartItems.length === 0
+                                ? "bg-[#1a1a1a]/40 border-[#2d2d2d]/20 text-[#666666] cursor-not-allowed opacity-50"
+                                : paymentMethod === "Cash"
+                                    ? "bg-[#f6b100]/10 border-[#f6b100] text-[#f6b100] cursor-pointer"
+                                    : "bg-[#1a1a1a] border-[#2d2d2d]/60 text-[#ababab] hover:bg-[#222222] cursor-pointer"
+                            }`}
+                    >
+                        Cash
+                    </button>
+                    <button
+                        onClick={() => setPaymentMethod("Online")}
+                        disabled={cartItems.length === 0}
+                        className={`flex-1 py-2.5 rounded-xl font-semibold text-sm transition-all border ${cartItems.length === 0
+                                ? "bg-[#1a1a1a]/40 border-[#2d2d2d]/20 text-[#666666] cursor-not-allowed opacity-50"
+                                : paymentMethod === "Online"
+                                    ? "bg-[#f6b100]/10 border-[#f6b100] text-[#f6b100] cursor-pointer"
+                                    : "bg-[#1a1a1a] border-[#2d2d2d]/60 text-[#ababab] hover:bg-[#222222] cursor-pointer"
+                            }`}
+                    >
+                        Online
+                    </button>
+                </div>
+            )}
 
             {/* Order Action Buttons */}
             <div className="flex items-center gap-3 mt-4">
-                <button
-                    onClick={handlePrintReceipt}
-                    disabled={cartItems.length === 0}
-                    className={`flex-1 py-3 rounded-xl font-semibold text-sm transition-all text-center border ${cartItems.length === 0
-                            ? "bg-[#025cca]/5 border-[#025cca]/10 text-[#555] cursor-not-allowed opacity-50"
-                            : "bg-[#025cca]/10 hover:bg-[#025cca]/20 border-[#025cca]/30 text-[#025cca] hover:text-white cursor-pointer active:scale-98"
-                        }`}
-                >
-                    Print Receipt
-                </button>
+                {!isWaiter && (
+                    <button
+                        onClick={handlePrintReceipt}
+                        disabled={cartItems.length === 0}
+                        className={`flex-1 py-3 rounded-xl font-semibold text-sm transition-all text-center border ${cartItems.length === 0
+                                ? "bg-[#025cca]/5 border-[#025cca]/10 text-[#555] cursor-not-allowed opacity-50"
+                                : "bg-[#025cca]/10 hover:bg-[#025cca]/20 border-[#025cca]/30 text-[#025cca] hover:text-white cursor-pointer active:scale-98"
+                            }`}
+                    >
+                        Print Receipt
+                    </button>
+                )}
                 <button
                     onClick={handlePlaceOrder}
                     disabled={cartItems.length === 0}
-                    className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all text-center ${cartItems.length === 0
+                    className={`py-3 rounded-xl font-bold text-sm transition-all text-center shadow-md shadow-[#f6b100]/5 ${
+                        isWaiter ? "w-full" : "flex-1"
+                    } ${cartItems.length === 0
                             ? "bg-[#2d2d2d] text-[#666] cursor-not-allowed opacity-50"
-                            : "bg-[#f6b100] hover:bg-[#f6b100]/90 text-[#1f1f1f] cursor-pointer active:scale-98 shadow-md shadow-[#f6b100]/5"
+                            : "bg-[#f6b100] hover:bg-[#f6b100]/90 text-[#1f1f1f] cursor-pointer active:scale-98"
                         }`}
                 >
-                    Place Order
+                    {isWaiter ? "Send to Kitchen" : "Place Order"}
                 </button>
             </div>
         </div>
