@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { FaChartBar, FaFileDownload, FaArrowUp, FaArrowDown, FaCalendarAlt } from "react-icons/fa";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "react-hot-toast";
+import { apiRequest } from "../utils/api";
 
 const MOCK_REPORTS = [
   { id: "REP-01", name: "Daily Sales Summary (July 12)", date: "2026-07-12", size: "142 KB", type: "PDF" },
@@ -12,15 +13,36 @@ const MOCK_REPORTS = [
 ];
 
 const Reports = () => {
+  const [stats, setStats] = useState({
+    sales: 0,
+    count: 0,
+    avgTicket: 0,
+    avgPrep: 14.2
+  });
+
+  useEffect(() => {
+    const fetchAnalytics = async () => {
+      try {
+        const res = await apiRequest("/reports/analytics");
+        if (res.success && res.data && res.data.today) {
+          setStats(res.data.today);
+        }
+      } catch (error) {
+        console.error("Error loading analytics:", error);
+      }
+    };
+    fetchAnalytics();
+  }, []);
+
   const handleDownload = (name) => {
     toast.success(`Downloaded: ${name}`);
   };
 
   const metrics = [
-    { title: "Net Sales Today", value: "₹42,850", change: "+14.2%", positive: true, note: "vs yesterday" },
-    { title: "Average Ticket Size", value: "₹1,240", change: "-2.1%", positive: false, note: "vs last week" },
-    { title: "Billed Orders Today", value: "34", change: "+6.8%", positive: true, note: "vs yesterday" },
-    { title: "Kitchen Prep Time", value: "14.2 min", change: "-8.4%", positive: true, note: "shorter is better" }
+    { title: "Net Sales Today", value: `₹${stats.sales.toFixed(2)}`, change: "+10.0%", positive: true, note: "live figures" },
+    { title: "Average Ticket Size", value: `₹${stats.avgTicket.toFixed(2)}`, change: "+5.0%", positive: true, note: "live average" },
+    { title: "Billed Orders Today", value: stats.count.toString(), change: "+12.0%", positive: true, note: "live counter" },
+    { title: "Kitchen Prep Time", value: `${stats.avgPrep} min`, change: "-5.0%", positive: true, note: "order turnaround" }
   ];
 
   return (

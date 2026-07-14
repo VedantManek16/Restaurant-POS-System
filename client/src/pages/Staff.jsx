@@ -1,37 +1,44 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
 import { FaUserPlus, FaSearch, FaUserShield, FaTrash, FaUserTag } from "react-icons/fa";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "react-hot-toast";
-
-const MOCK_STAFF = [
-  { id: 1, name: "Vedant Manek", email: "superadmin@restro.com", role: "Super Admin", phone: "1111111111", outlet: "All Outlets" },
-  { id: 2, name: "Taste Hub Admin", email: "admin@restro.com", role: "Restaurant Admin", phone: "2222222222", outlet: "Restro Main (Downtown)" },
-  { id: 3, name: "Sarah Cashier", email: "cashier@restro.com", role: "Cashier", phone: "3333333333", outlet: "Restro Main (Downtown)" },
-  { id: 4, name: "John Waiter", email: "waiter@restro.com", role: "Waiter", phone: "4444444444", outlet: "Restro Main (Downtown)" },
-  { id: 5, name: "Michael Waiter", email: "michael@restro.com", role: "Waiter", phone: "9876543220", outlet: "Restro Main (Downtown)" },
-  { id: 6, name: "Emily Cashier", email: "emily@restro.com", role: "Cashier", phone: "9876543221", outlet: "Restro West End (Bistro)" }
-];
+import { apiRequest } from "../utils/api";
 
 const Staff = () => {
   const { user } = useSelector((state) => state.user);
   const isSuperAdmin = user?.role === "Super Admin";
 
-  const [staffList, setStaffList] = useState(MOCK_STAFF);
+  const [staffList, setStaffList] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
   const [newStaff, setNewStaff] = useState({
     name: "",
     email: "",
     phone: "",
+    password: "",
     role: "Waiter",
-    outlet: isSuperAdmin ? "Restro Main (Downtown)" : (user?.tenant || "Restro Main (Downtown)")
+    outlet: isSuperAdmin ? "Restro Main (Downtown)" : (user?.tenantName || "Restro Main")
   });
 
-  const handleAddStaff = (e) => {
+  useEffect(() => {
+    const fetchStaff = async () => {
+      try {
+        const res = await apiRequest("/user/staff");
+        if (res.success) {
+          setStaffList(res.data);
+        }
+      } catch (error) {
+        console.error("Error fetching staff:", error);
+      }
+    };
+    fetchStaff();
+  }, []);
+
+  const handleAddStaff = async (e) => {
     e.preventDefault();
-    if (!newStaff.name || !newStaff.email || !newStaff.phone) {
+    if (!newStaff.name || !newStaff.email || !newStaff.phone || !newStaff.password) {
       toast.error("Please fill in all fields.");
       return;
     }
@@ -42,35 +49,60 @@ const Staff = () => {
       return;
     }
 
-    const created = {
-      id: Date.now(),
-      ...newStaff
-    };
+    try {
+      const payload = {
+        name: newStaff.name,
+        email: newStaff.email,
+        phone: newStaff.phone,
+        role: newStaff.role,
+        password: newStaff.password,
+        tenantName: isSuperAdmin ? newStaff.outlet : (user?.tenantName || "Restro Main")
+      };
 
-    setStaffList([created, ...staffList]);
-    setShowAddModal(false);
-    setNewStaff({
-      name: "",
-      email: "",
-      phone: "",
-      role: "Waiter",
-      outlet: isSuperAdmin ? "Restro Main (Downtown)" : (user?.tenant || "Restro Main (Downtown)")
-    });
-    toast.success(`${created.name} added as ${created.role}!`);
+      const res = await apiRequest("/user/register", {
+        method: "POST",
+        body: payload
+      });
+
+      if (res.success) {
+        setStaffList([res.data, ...staffList]);
+        setShowAddModal(false);
+        setNewStaff({
+          name: "",
+          email: "",
+          phone: "",
+          password: "",
+          role: "Waiter",
+          outlet: isSuperAdmin ? "Restro Main (Downtown)" : (user?.tenantName || "Restro Main")
+        });
+        toast.success(`${res.data.name} added as ${res.data.role} successfully!`);
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error(error.message || "Failed to add staff member.");
+    }
   };
 
-  const handleDeleteStaff = (id, name) => {
-    setStaffList(staffList.filter(s => s.id !== id));
-    toast.success(`Removed ${name} from staff registry.`);
+  const handleDeleteStaff = async (id, name) => {
+    try {
+      const res = await apiRequest(`/user/staff/${id}`, {
+        method: "DELETE"
+      });
+      if (res.success) {
+        setStaffList(staffList.filter(s => s._id !== id));
+        toast.success(`Removed ${name} from staff registry.`);
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error(error.message || "Failed to delete staff member.");
+    }
   };
 
   const filteredStaff = staffList.filter(s => {
-    // If NOT super admin, only show staff from the same outlet / tenant
-    const sameOutlet = isSuperAdmin || s.outlet === "All Outlets" || s.outlet === user?.tenant;
     const matchesSearch = s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           s.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           s.role.toLowerCase().includes(searchTerm.toLowerCase());
-    return sameOutlet && matchesSearch;
+    return matchesSearch;
   });
 
   return (
@@ -85,7 +117,7 @@ const Staff = () => {
           <p className="text-xs text-gray-400 mt-1">
             {isSuperAdmin 
               ? "View and manage all registered platform administrators, operators, and staff." 
-              : `Manage access rights, account roles, and active employees for ${user?.tenant || "your outlet"}.`}
+              : `Manage access rights, account roles, and active employees for ${user?.tenantName || "your outlet"}.`}
           </p>
         </div>
 
@@ -132,8 +164,8 @@ const Staff = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
-                {filteredStaff.map((staff) => (
-                  <tr key={staff.id} className="hover:bg-white/[0.02] transition-colors text-xs text-gray-300">
+                 {filteredStaff.map((staff) => (
+                  <tr key={staff._id} className="hover:bg-white/[0.02] transition-colors text-xs text-gray-300">
                     <td className="py-4 px-6 font-semibold text-white">
                       <div className="flex items-center gap-2">
                         <div className="w-7 h-7 rounded-full bg-[#262626] border border-white/10 flex items-center justify-center font-bold text-[10px] text-yellow-400">
@@ -163,12 +195,12 @@ const Staff = () => {
                       </span>
                     </td>
                     <td className="py-4 px-6 font-medium text-gray-400">
-                      {staff.outlet}
+                      {staff.tenantName}
                     </td>
                     <td className="py-4 px-6 text-right">
                       {staff.email !== user?.email ? (
                         <button
-                          onClick={() => handleDeleteStaff(staff.id, staff.name)}
+                          onClick={() => handleDeleteStaff(staff._id, staff.name)}
                           className="text-red-400/80 hover:text-red-400 p-1.5 rounded-lg hover:bg-red-500/10 transition-all cursor-pointer"
                         >
                           <FaTrash size={12} />
@@ -241,6 +273,20 @@ const Staff = () => {
                   placeholder="e.g. 9876543210"
                   value={newStaff.phone}
                   onChange={(e) => setNewStaff({ ...newStaff, phone: e.target.value })}
+                  className="w-full bg-[#262626] border border-white/5 rounded-xl px-4 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-yellow-400/50"
+                />
+              </div>
+
+              <div>
+                <label className="block text-gray-400 text-[10px] font-semibold uppercase tracking-wider mb-1">
+                  Initial Password
+                </label>
+                <input
+                  type="password"
+                  required
+                  placeholder="Enter initial login password"
+                  value={newStaff.password}
+                  onChange={(e) => setNewStaff({ ...newStaff, password: e.target.value })}
                   className="w-full bg-[#262626] border border-white/5 rounded-xl px-4 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-yellow-400/50"
                 />
               </div>

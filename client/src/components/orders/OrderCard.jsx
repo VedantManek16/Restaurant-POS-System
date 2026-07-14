@@ -1,10 +1,21 @@
 import { FaCheckDouble, FaCircle } from "react-icons/fa";
 import { getInitials } from "../../utils/getInitials";
 
-const OrderCard = ({ order }) => {
+const OrderCard = ({ order, onStatusUpdate }) => {
     if (!order) return null;
 
-    const { customerName, id, status, orderType, tableNo, itemsCount, date, total } = order;
+    const customerName = order.customerDetails?.name || "Walk-in Customer";
+    const id = order._id ? `#ORD-${order._id.substring(order._id.length - 6).toUpperCase()}` : "N/A";
+    const status = order.orderStatus?.toLowerCase() === "in progress" || order.orderStatus?.toLowerCase() === "preparing" 
+        ? "progress" 
+        : order.orderStatus?.toLowerCase() === "ready" 
+            ? "ready" 
+            : "completed";
+    const orderType = order.table ? "Dine in" : "Takeaway";
+    const tableNo = order.table?.tableNo || "N/A";
+    const itemsCount = order.items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
+    const date = new Date(order.orderDate).toLocaleString();
+    const total = order.bills?.totalWithTax || 0;
 
     return (
         <div className="w-full max-w-[340px] bg-[#1a1a1a] p-4 rounded-xl border border-[#2d2d2d]/30 shadow-md flex flex-col hover:bg-[#202020] transition-colors duration-200">
@@ -70,6 +81,27 @@ const OrderCard = ({ order }) => {
                 <h1 className="text-[#ababab] text-[11px] font-medium">Total</h1>
                 <p className="text-[#f5f5f5] text-sm font-semibold">₹{total.toFixed(2)}</p>
             </div>
+
+            {status !== "completed" && onStatusUpdate && (
+                <div className="mt-3 pt-3 border-t border-[#2d2d2d]/50 flex justify-end gap-2">
+                    {status === "progress" && (
+                        <button
+                            onClick={() => onStatusUpdate(order._id, "Ready")}
+                            className="bg-[#f6b100] hover:bg-[#e0a100] text-[#1a1a1a] px-3 py-1.5 rounded-lg text-[10px] font-bold cursor-pointer transition-colors"
+                        >
+                            Mark Ready
+                        </button>
+                    )}
+                    {status === "ready" && (
+                        <button
+                            onClick={() => onStatusUpdate(order._id, "Completed")}
+                            className="bg-[#02ca3a] hover:bg-[#02a02e] text-[#1a1a1a] px-3 py-1.5 rounded-lg text-[10px] font-bold cursor-pointer transition-colors"
+                        >
+                            Mark Completed
+                        </button>
+                    )}
+                </div>
+            )}
         </div>
     )
 }

@@ -56,6 +56,9 @@ export const cartSlice = createSlice({
         clearCart: (state) => {
             state.cartItems = [];
         },
+        loadCart: (state, action) => {
+            state.cartItems = action.payload || [];
+        },
     },
 });
 
@@ -65,6 +68,7 @@ export const {
     removeItemFromCart,
     updateItemNote,
     clearCart,
+    loadCart,
 } = cartSlice.actions;
 
 export default cartSlice.reducer;

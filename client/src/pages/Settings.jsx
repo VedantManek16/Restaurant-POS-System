@@ -1,17 +1,57 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
 import { FaCog, FaStore, FaTools, FaBell, FaReceipt, FaLock } from "react-icons/fa";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "react-hot-toast";
+import { apiRequest } from "../utils/api";
 
 const Settings = () => {
   const { user } = useSelector((state) => state.user);
   const [activeTab, setActiveTab] = useState("outlet");
+  const [isSaving, setIsSaving] = useState(false);
+  const [settings, setSettings] = useState({
+    restaurantName: "Taste Hub Restaurant",
+    address: "G-12, Food Circle Mall, Downtown City Centre, 400001",
+    email: "contact@tastehub.com",
+    phone: "+91 98765 43210",
+    currency: "INR",
+    taxRate: 18,
+    serviceCharge: 5,
+    receiptFooter: "Thank you for dining with us!"
+  });
 
-  const handleSave = (e) => {
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await apiRequest("/settings");
+        if (res.success && res.data) {
+          setSettings(res.data);
+        }
+      } catch (error) {
+        console.error("Error loading settings:", error);
+      }
+    };
+    fetchSettings();
+  }, []);
+
+  const handleSave = async (e) => {
     e.preventDefault();
-    toast.success("Settings saved successfully.");
+    setIsSaving(true);
+    try {
+      const res = await apiRequest("/settings", {
+        method: "PUT",
+        body: settings
+      });
+      if (res.success) {
+        toast.success("Settings saved successfully.");
+      }
+    } catch (error) {
+      console.error("Error saving settings:", error);
+      toast.error(error.message || "Failed to save settings.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const tabs = [
@@ -71,7 +111,8 @@ const Settings = () => {
                     <label className="block text-gray-400 text-[10px] font-semibold uppercase tracking-wider mb-1">Restaurant Name</label>
                     <input
                       type="text"
-                      defaultValue="Taste Hub Restaurant"
+                      value={settings.restaurantName}
+                      onChange={(e) => setSettings({ ...settings, restaurantName: e.target.value })}
                       className="w-full bg-[#262626] border border-white/5 rounded-xl px-4 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-yellow-400/50"
                     />
                   </div>
@@ -80,7 +121,7 @@ const Settings = () => {
                     <input
                       type="text"
                       disabled
-                      value={user?.tenant || "Restro Main (Downtown)"}
+                      value={user?.tenantName || "Restro Main"}
                       className="w-full bg-[#262626] border border-white/5 rounded-xl px-4 py-2 text-xs text-gray-500 font-semibold cursor-not-allowed"
                     />
                   </div>
@@ -88,7 +129,8 @@ const Settings = () => {
                     <label className="block text-gray-400 text-[10px] font-semibold uppercase tracking-wider mb-1">Store Email</label>
                     <input
                       type="email"
-                      defaultValue="contact@tastehub.com"
+                      value={settings.email}
+                      onChange={(e) => setSettings({ ...settings, email: e.target.value })}
                       className="w-full bg-[#262626] border border-white/5 rounded-xl px-4 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-yellow-400/50"
                     />
                   </div>
@@ -96,7 +138,8 @@ const Settings = () => {
                     <label className="block text-gray-400 text-[10px] font-semibold uppercase tracking-wider mb-1">Store Phone</label>
                     <input
                       type="text"
-                      defaultValue="+91 98765 43210"
+                      value={settings.phone}
+                      onChange={(e) => setSettings({ ...settings, phone: e.target.value })}
                       className="w-full bg-[#262626] border border-white/5 rounded-xl px-4 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-yellow-400/50"
                     />
                   </div>
@@ -105,15 +148,16 @@ const Settings = () => {
                 <div>
                   <label className="block text-gray-400 text-[10px] font-semibold uppercase tracking-wider mb-1">Store Address</label>
                   <textarea
-                    defaultValue="G-12, Food Circle Mall, Downtown City Centre, 400001"
+                    value={settings.address}
+                    onChange={(e) => setSettings({ ...settings, address: e.target.value })}
                     rows="3"
                     className="w-full bg-[#262626] border border-white/5 rounded-xl px-4 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-yellow-400/50 resize-none"
                   ></textarea>
                 </div>
 
                 <div className="pt-2">
-                  <Button type="submit" className="bg-yellow-400 hover:bg-yellow-300 text-gray-950 font-bold text-xs px-6 py-2 rounded-xl cursor-pointer">
-                    Save Changes
+                  <Button type="submit" disabled={isSaving} className="bg-yellow-400 hover:bg-yellow-300 text-gray-950 font-bold text-xs px-6 py-2 rounded-xl cursor-pointer">
+                    {isSaving ? "Saving..." : "Save Changes"}
                   </Button>
                 </div>
               </form>
@@ -129,17 +173,22 @@ const Settings = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-gray-400 text-[10px] font-semibold uppercase tracking-wider mb-1">Currency Symbol</label>
-                    <select className="w-full bg-[#262626] border border-white/5 rounded-xl px-4 py-2 text-xs text-white placeholder-gray-500 focus:outline-none cursor-pointer">
+                    <select
+                      value={settings.currency}
+                      onChange={(e) => setSettings({ ...settings, currency: e.target.value })}
+                      className="w-full bg-[#262626] border border-white/5 rounded-xl px-4 py-2 text-xs text-white placeholder-gray-500 focus:outline-none cursor-pointer"
+                    >
                       <option value="INR">₹ (INR)</option>
                       <option value="USD">$ (USD)</option>
                       <option value="EUR">€ (EUR)</option>
                     </select>
                   </div>
                   <div>
-                    <label className="block text-gray-400 text-[10px] font-semibold uppercase tracking-wider mb-1">GST / CGST + SGST (%)</label>
+                    <label className="block text-gray-400 text-[10px] font-semibold uppercase tracking-wider mb-1">GST (%)</label>
                     <input
                       type="number"
-                      defaultValue={18}
+                      value={settings.taxRate}
+                      onChange={(e) => setSettings({ ...settings, taxRate: Number(e.target.value) })}
                       className="w-full bg-[#262626] border border-white/5 rounded-xl px-4 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-yellow-400/50"
                     />
                   </div>
@@ -147,7 +196,8 @@ const Settings = () => {
                     <label className="block text-gray-400 text-[10px] font-semibold uppercase tracking-wider mb-1">Default Service Charge (%)</label>
                     <input
                       type="number"
-                      defaultValue={5}
+                      value={settings.serviceCharge}
+                      onChange={(e) => setSettings({ ...settings, serviceCharge: Number(e.target.value) })}
                       className="w-full bg-[#262626] border border-white/5 rounded-xl px-4 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-yellow-400/50"
                     />
                   </div>
@@ -155,15 +205,16 @@ const Settings = () => {
                     <label className="block text-gray-400 text-[10px] font-semibold uppercase tracking-wider mb-1">Receipt Footer Note</label>
                     <input
                       type="text"
-                      defaultValue="Thank you for dining with us!"
+                      value={settings.receiptFooter}
+                      onChange={(e) => setSettings({ ...settings, receiptFooter: e.target.value })}
                       className="w-full bg-[#262626] border border-white/5 rounded-xl px-4 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-yellow-400/50"
                     />
                   </div>
                 </div>
 
                 <div className="pt-2">
-                  <Button type="submit" className="bg-yellow-400 hover:bg-yellow-300 text-gray-950 font-bold text-xs px-6 py-2 rounded-xl cursor-pointer">
-                    Save Tax Configuration
+                  <Button type="submit" disabled={isSaving} className="bg-yellow-400 hover:bg-yellow-300 text-gray-950 font-bold text-xs px-6 py-2 rounded-xl cursor-pointer">
+                    {isSaving ? "Saving..." : "Save Tax Configuration"}
                   </Button>
                 </div>
               </form>

@@ -3,20 +3,57 @@ import { getInitials } from "../../utils/getInitials";
 import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { updateTable } from "../../redux/slices/customerSlice";
-const TableCard = ({ name, status, initials, seats, id }) => {
+import { clearCart, loadCart } from "../../redux/slices/cartSlice";
+import { menus } from "../../constants";
+
+const TableCard = ({ name, status, initials, seats, id, currentOrder }) => {
     const navigate = useNavigate();
     const isBooked = status?.toLowerCase() === "booked";
     const dispatch = useDispatch();
-    const handleClick = (name) => {
-        if (isBooked) {
-            return "";
+
+    const handleClick = () => {
+        if (isBooked && currentOrder) {
+            // Restore active session details
+            dispatch(updateTable({
+                tableNumber: name,
+                tableId: id,
+                activeOrderId: currentOrder._id,
+                orderId: currentOrder.orderId,
+                customerName: currentOrder.customerDetails?.name,
+                customerMobileNumber: currentOrder.customerDetails?.phone,
+                guests: currentOrder.customerDetails?.guests
+            }));
+
+            const cartItems = (currentOrder.items || []).map(item => {
+                let foundMenuId = "all";
+                for (const m of menus) {
+                    const match = m.items.find(i => i.id === item.id);
+                    if (match) {
+                        foundMenuId = m.id;
+                        break;
+                    }
+                }
+                return {
+                    id: item.id,
+                    name: item.name,
+                    price: item.pricePerQuantity,
+                    quantity: item.quantity,
+                    notes: item.notes || "",
+                    menuId: foundMenuId
+                };
+            });
+
+            dispatch(loadCart(cartItems));
+            navigate(`/menu`);
         } else {
-            dispatch(updateTable({ tableNumber: name }))
+            // Start fresh session
+            dispatch(updateTable({ tableNumber: name, tableId: id, activeOrderId: null }));
+            dispatch(clearCart());
             navigate(`/menu`);
         }
     };
     return (
-        <div onClick={() => handleClick(name)} className="w-full max-w-[340px] bg-[#1a1a1a] p-4 rounded-xl border border-[#2d2d2d]/30 shadow-md flex flex-col hover:bg-[#202020] transition-colors duration-200">
+        <div onClick={handleClick} className="w-full max-w-[340px] bg-[#1a1a1a] p-4 rounded-xl border border-[#2d2d2d]/30 shadow-md flex flex-col hover:bg-[#202020] transition-colors duration-200">
             {/* Header info */}
             <div className="flex items-center justify-between">
                 <h1 className="text-[#f5f5f5] text-sm font-semibold tracking-wide">{name}</h1>

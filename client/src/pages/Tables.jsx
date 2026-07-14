@@ -1,15 +1,30 @@
 import BottomNav from "../components/shared/BottomNav"
 import TableCard from "../components/tables/TableCard"
 import BackButton from "../components/shared/BackButton"
-import { useState } from "react";
-import { tables } from "../constants";
+import { useState, useEffect } from "react";
+import { apiRequest } from "../utils/api";
 
 const Tables = () => {
     const [status, setStatus] = useState("all");
+    const [tablesData, setTablesData] = useState([]);
+
+    useEffect(() => {
+        const fetchTables = async () => {
+            try {
+                const res = await apiRequest("/table");
+                if (res.success) {
+                    setTablesData(res.data);
+                }
+            } catch (error) {
+                console.error("Error fetching tables:", error);
+            }
+        };
+        fetchTables();
+    }, []);
 
     const filteredTables = status === "all"
-        ? tables
-        : tables.filter(table => table.status?.toLowerCase() === status.toLowerCase());
+        ? tablesData
+        : tablesData.filter(table => table.status?.toLowerCase() === status.toLowerCase());
 
     const getTabClass = (tabStatus) => {
         return status === tabStatus
@@ -43,12 +58,13 @@ const Tables = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-12 justify-items-center">
                     {filteredTables.map(table => (
                         <TableCard
-                            key={table.id}
-                            id={table.id}
-                            name={table.name || table.tableNo}
+                            key={table._id}
+                            id={table._id}
+                            name={table.tableNo}
                             status={table.status}
-                            initials={table.initial || table.currentOrder?.customerDetails?.name}
+                            initials={table.currentOrder?.customerDetails?.name}
                             seats={table.seats}
+                            currentOrder={table.currentOrder}
                         />
                     ))}
                 </div>

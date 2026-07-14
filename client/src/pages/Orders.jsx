@@ -1,15 +1,54 @@
 import BottomNav from "../components/shared/BottomNav"
 import OrderCard from "../components/orders/OrderCard"
 import BackButton from "../components/shared/BackButton"
-import { useState } from "react";
-import { dummyOrders } from "../constants";
+import { useState, useEffect } from "react";
+import { apiRequest } from "../utils/api";
+import { toast } from "react-hot-toast";
 
 const Orders = () => {
   const [status, setStatus] = useState("all");
+  const [ordersData, setOrdersData] = useState([]);
+
+  const fetchOrders = async () => {
+    try {
+      const res = await apiRequest("/order");
+      if (res && res.data) {
+        setOrdersData(res.data);
+      }
+    } catch (error) {
+      console.error("Error fetching orders:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchOrders();
+  }, []);
+
+  const handleStatusUpdate = async (orderId, newStatus) => {
+    try {
+      const res = await apiRequest(`/order/${orderId}`, {
+        method: "PUT",
+        body: { orderStatus: newStatus }
+      });
+      if (res.success) {
+        toast.success(`Order status updated to ${newStatus}`);
+        await fetchOrders();
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error(error.message || "Failed to update status.");
+    }
+  };
 
   const filteredOrders = status === "all"
-    ? dummyOrders
-    : dummyOrders.filter(order => order.status === status);
+    ? ordersData
+    : ordersData.filter(order => {
+        const orderStatus = order.orderStatus?.toLowerCase();
+        if (status === "progress") return orderStatus === "in progress" || orderStatus === "preparing";
+        if (status === "ready") return orderStatus === "ready";
+        if (status === "completed") return orderStatus === "completed" || orderStatus === "served";
+        return false;
+      });
 
   const getTabClass = (tabStatus) => {
     return status === tabStatus
@@ -45,7 +84,7 @@ const Orders = () => {
       <div className="flex-1 min-h-0 overflow-y-auto scrollbar-hide px-10 py-2">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-12 justify-items-center">
           {filteredOrders.map(order => (
-            <OrderCard key={order.id} order={order} />
+            <OrderCard key={order._id} order={order} onStatusUpdate={handleStatusUpdate} />
           ))}
         </div>
       </div>

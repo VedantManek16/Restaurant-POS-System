@@ -5,6 +5,11 @@ import config from "./config/config.js";
 import connectDB from "./config/db.js";
 import globalErrorHandler from "./middleware/globalErrorHandler.js";
 import userRoute from "./routes/userRoute.js";
+import tableRoute from "./routes/tableRoute.js";
+import orderRoute from "./routes/orderRoute.js";
+import paymentRoute from "./routes/paymentRoute.js";
+import settingsRoute from "./routes/settingsRoute.js";
+import reportRoute from "./routes/reportRoute.js";
 
 connectDB();
 const PORT = config.port || 8000;
@@ -23,6 +28,11 @@ app.get("/", (req, res) => {
 });
 
 app.use("/api/user", userRoute);
+app.use("/api/table", tableRoute);
+app.use("/api/order", orderRoute);
+app.use("/api/payment", paymentRoute);
+app.use("/api/settings", settingsRoute);
+app.use("/api/reports", reportRoute);
 
 // Global error handler
 app.use(globalErrorHandler);

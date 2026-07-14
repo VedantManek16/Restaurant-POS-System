@@ -130,3 +130,42 @@ export const logout = async (req, res, next) => {
         next(error);
     }
 };
+
+export const getTenantStaff = async (req, res, next) => {
+    try {
+        const query = req.user.role === "Super Admin" 
+            ? {} 
+            : { tenantId: req.user.tenantId };
+
+        const staff = await User.find(query).select("-password");
+        res.status(200).json({ success: true, data: staff });
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const deleteStaff = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        if (req.user._id.toString() === id) {
+            const error = createHttpError(400, "You cannot delete your own profile!");
+            return next(error);
+        }
+
+        const userToDelete = await User.findById(id);
+        if (!userToDelete) {
+            const error = createHttpError(404, "User not found!");
+            return next(error);
+        }
+
+        if (req.user.role !== "Super Admin" && userToDelete.tenantId !== req.user.tenantId) {
+            const error = createHttpError(403, "You do not have permission to delete this staff member!");
+            return next(error);
+        }
+
+        await User.findByIdAndDelete(id);
+        res.status(200).json({ success: true, message: "Staff member deleted successfully!" });
+    } catch (error) {
+        next(error);
+    }
+};

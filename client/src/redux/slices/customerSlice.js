@@ -12,8 +12,10 @@ const initialState = {
     customerMobileNumber: '',
     guests: 1,
     tableNumber: 'Takeaway',
+    tableId: null,
+    activeOrderId: null
 }
-
+ 
 export const customerSlice = createSlice({
     name: 'customer',
     initialState,
@@ -25,6 +27,7 @@ export const customerSlice = createSlice({
                 state.orderId = orderId;
                 state.customerMobileNumber = phone || '';
                 state.guests = guests || 1;
+                state.activeOrderId = null;
             },
             prepare: ({ name, phone, guests }) => {
                 return {
@@ -44,6 +47,8 @@ export const customerSlice = createSlice({
                 state.customerMobileNumber = '';
                 state.guests = 1;
                 state.tableNumber = 'Takeaway';
+                state.tableId = null;
+                state.activeOrderId = null;
             },
             prepare: () => {
                 return {
@@ -55,6 +60,22 @@ export const customerSlice = createSlice({
         },
         updateTable: (state, action) => {
             state.tableNumber = action.payload.tableNumber;
+            state.tableId = action.payload.tableId;
+            if (action.payload.activeOrderId !== undefined) {
+                state.activeOrderId = action.payload.activeOrderId;
+            }
+            if (action.payload.customerName) {
+                state.customerName = action.payload.customerName;
+            }
+            if (action.payload.customerMobileNumber) {
+                state.customerMobileNumber = action.payload.customerMobileNumber;
+            }
+            if (action.payload.guests) {
+                state.guests = action.payload.guests;
+            }
+            if (action.payload.orderId) {
+                state.orderId = action.payload.orderId;
+            }
         },
     },
 })

@@ -12,3 +12,14 @@ export const formatTime = (date) => {
         date.getMinutes()
     ).padStart(2, "0")}:${String(date.getSeconds()).padStart(2, "0")}`;
 };
+
+export const formatTime12Hr = (date) => {
+    if (!date) return "";
+    let hours = date.getHours();
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12; // convert 0 to 12
+    return `${hours}:${minutes} ${ampm}`;
+};
+

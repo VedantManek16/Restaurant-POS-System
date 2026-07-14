@@ -5,13 +5,23 @@ import { useSelector, useDispatch } from "react-redux";
 import { logoutUser } from "../../redux/slices/userSlice";
 import { useNavigate } from "react-router-dom";
 import { apiRequest } from "../../utils/api";
+import { formatTime12Hr } from "../../utils/dateFormatter";
+import { BiSolidDish } from "react-icons/bi";
+import CreateOrderModal from "./CreateOrderModal";
 
 const Header = ({ toggleSidebar, isSidebarCollapsed }) => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.user);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const dropdownRef = useRef(null);
+  const [time, setTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -63,6 +73,24 @@ const Header = ({ toggleSidebar, isSidebarCollapsed }) => {
 
       {/* Logged user details */}
       <div className="flex items-center gap-4">
+        {user?.role !== "Super Admin" && (
+          <>
+            <button 
+              onClick={() => setIsModalOpen(true)}
+              className="flex items-center gap-2 bg-[#f6b100] hover:bg-[#e0a100] text-[#1a1a1a] px-4 py-2 rounded-xl text-xs font-bold transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-md select-none border border-[#f6b100]/25"
+            >
+              <BiSolidDish size={15} />
+              <span>New Order</span>
+            </button>
+            <CreateOrderModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+          </>
+        )}
+
+        {/* Time display */}
+        <div className="text-xs font-semibold text-[#ababab] bg-[#1f1f1f] border border-[#2d2d2d]/30 px-3.5 py-2 rounded-xl select-none">
+          {formatTime12Hr(time)}
+        </div>
+
         <div className="bg-[#1f1f1f] rounded-xl p-2 cursor-pointer hover:bg-[#262626] transition-colors border border-[#2d2d2d]/30">
           <FaBell className="text-[#f5f5f5] text-lg" />
         </div>

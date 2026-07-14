@@ -9,6 +9,7 @@ import { GrInProgress } from 'react-icons/gr'
 import { FaBuilding, FaServer, FaUsers, FaCoins, FaEllipsisV } from "react-icons/fa"
 import { useState, useEffect, useRef } from "react"
 import { toast } from "react-hot-toast"
+import { apiRequest } from "../utils/api"
 
 const MOCK_RESTAURANTS = [
   { id: 1, name: "Taste Hub", owner: "Vedant Manek", plan: "Enterprise", status: "Active", created: "Jan 15, 2026" },
@@ -20,9 +21,64 @@ const MOCK_RESTAURANTS = [
 const Home = () => {
   const { user } = useSelector((state) => state.user);
   const isSuperAdmin = user?.role === "Super Admin";
+  const isRestaurantAdmin = user?.role === "Restaurant Admin";
+  
   const [restaurants, setRestaurants] = useState(MOCK_RESTAURANTS);
   const [activeDropdownId, setActiveDropdownId] = useState(null);
   const dropdownRef = useRef(null);
+  const [timeRange, setTimeRange] = useState("7");
+  const [analytics, setAnalytics] = useState({
+    today: { sales: 0, count: 0, avgTicket: 0, avgPrep: 14.2, inProgress: 0 },
+    allTime: { sales: 0, count: 0, avgTicket: 0 }
+  });
+
+  const fetchAnalytics = async () => {
+    try {
+      const res = await apiRequest("/reports/analytics");
+      if (res.success && res.data) {
+        setAnalytics(res.data);
+      }
+    } catch (error) {
+      console.error("Error loading home metrics:", error);
+    }
+  };
+
+  useEffect(() => {
+    if (!isSuperAdmin) {
+      fetchAnalytics();
+    }
+  }, [isSuperAdmin]);
+
+  const handleRefresh = async () => {
+    if (!isSuperAdmin) {
+      await fetchAnalytics();
+    }
+    toast.success("Dashboard metrics refreshed!");
+  };
+
+  const getRevenueStats = () => {
+    switch (timeRange) {
+      case "30":
+      case "90":
+        return {
+          rangeText: "ALL-TIME REVENUE",
+          revenue: analytics.allTime.sales,
+          ordersCount: analytics.allTime.count,
+          avgTransaction: analytics.allTime.avgTicket
+        };
+      case "7":
+      default:
+        return {
+          rangeText: "TODAY'S REVENUE",
+          revenue: analytics.today.sales,
+          ordersCount: analytics.today.count,
+          avgTransaction: analytics.today.avgTicket
+        };
+    }
+  };
+
+  const stats = getRevenueStats();
+
 
   const toggleStatus = (id, name, currentStatus) => {
     const nextStatus = currentStatus === "Active" ? "Suspended" : "Active";
@@ -156,11 +212,82 @@ const Home = () => {
     <section className="bg-[#1f1f1f] h-[calc(100vh-4rem)] overflow-hidden flex flex-col md:flex-row gap-3 pb-16 md:pb-0 select-none">
       {/* Left Div */}
       <div className="flex-[3] flex flex-col min-w-0 overflow-hidden">
-        <Greetings />
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 px-8 mt-5">
-          <MiniCard title="Total Earnings" icon={<BsCashCoin />} number={51200} footerNum={1.6} trend="up" />
-          <MiniCard title="In Progress" icon={<GrInProgress />} number={16} footerNum={3.6} trend="up" />
-        </div>
+        {isRestaurantAdmin ? (
+          <Greetings 
+            showDropdown={true} 
+            timeRange={timeRange} 
+            setTimeRange={setTimeRange} 
+            onRefresh={handleRefresh} 
+          />
+        ) : (
+          <Greetings />
+        )}
+
+        {isRestaurantAdmin ? (
+          /* Premium 3-column Grid for Restaurant Admin */
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 px-8 mt-5">
+            {/* Card 1: Today's Revenue */}
+            <div className="bg-[#16251d]/40 p-5 rounded-2xl border border-emerald-500/20 flex flex-col justify-between min-h-[135px] w-full transition-all duration-300 hover:border-emerald-500/35 hover:shadow-xl hover:shadow-black/25">
+              <div className="flex items-center justify-between">
+                <h1 className="text-emerald-400 font-bold uppercase tracking-wider text-[10px]">Today's Revenue</h1>
+                <div className="p-2 rounded-xl text-emerald-400 bg-emerald-500/10 border border-emerald-500/20">
+                  <BsCashCoin size={16} />
+                </div>
+              </div>
+              <div className="mt-4">
+                <p className="text-3xl font-black text-white tracking-tight leading-none">
+                  ₹{analytics.today.sales.toFixed(2)}
+                </p>
+                <div className="text-gray-500 text-[11px] mt-2 font-semibold flex items-center justify-between">
+                  <span>{analytics.today.count} transaction{analytics.today.count !== 1 ? "s" : ""}</span>
+                  <span className="text-emerald-400 font-bold flex items-center">live update</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Card 2: Range-Based Revenue */}
+            <div className="bg-[#1a1a1a] p-5 rounded-2xl border border-white/5 flex flex-col justify-between min-h-[135px] w-full transition-all duration-300 hover:border-yellow-400/20 hover:shadow-xl hover:shadow-black/25">
+              <div className="flex items-center justify-between">
+                <h1 className="text-[#ababab] font-bold uppercase tracking-wider text-[10px]">{stats.rangeText}</h1>
+                <div className="p-2 rounded-xl text-[#f5f5f5] bg-[#262626] border border-white/5">
+                  <BsCashCoin size={16} />
+                </div>
+              </div>
+              <div className="mt-4">
+                <p className="text-3xl font-black text-white tracking-tight leading-none">
+                  ₹{stats.revenue.toLocaleString("en-IN")}.00
+                </p>
+                <p className="text-gray-500 text-[11px] mt-3.5 font-semibold">
+                  {stats.ordersCount} orders
+                </p>
+              </div>
+            </div>
+
+            {/* Card 3: Avg Transaction */}
+            <div className="bg-[#1a1a1a] p-5 rounded-2xl border border-white/5 flex flex-col justify-between min-h-[135px] w-full transition-all duration-300 hover:border-yellow-400/20 hover:shadow-xl hover:shadow-black/25">
+              <div className="flex items-center justify-between">
+                <h1 className="text-[#ababab] font-bold uppercase tracking-wider text-[10px]">Avg Transaction</h1>
+                <div className="p-2 rounded-xl text-[#ababab] bg-[#262626] border border-white/5">
+                  <GrInProgress size={16} />
+                </div>
+              </div>
+              <div className="mt-4">
+                <p className="text-3xl font-black text-white tracking-tight leading-none">
+                  ₹{stats.avgTransaction.toFixed(2)}
+                </p>
+                <p className="text-gray-500 text-[11px] mt-3.5 font-semibold">
+                  per sale
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* Standard 2-column Grid for Waiters and Cashiers */
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 px-8 mt-5">
+            <MiniCard title="Total Earnings" icon={<BsCashCoin />} number={analytics.allTime.sales} footerNum={1.6} trend="up" />
+            <MiniCard title="In Progress" icon={<GrInProgress />} number={analytics.today.inProgress} footerNum={3.6} trend="up" />
+          </div>
+        )}
         <RecentOrders />
       </div>
 
