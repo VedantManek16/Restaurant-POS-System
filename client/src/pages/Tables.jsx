@@ -3,24 +3,62 @@ import TableCard from "../components/tables/TableCard"
 import BackButton from "../components/shared/BackButton"
 import { useState, useEffect } from "react";
 import { apiRequest } from "../utils/api";
+import { useSelector } from "react-redux";
+import { FaPlus } from "react-icons/fa";
+import Modal from "../components/shared/Modal";
+import { toast } from "react-hot-toast";
 
 const Tables = () => {
     const [status, setStatus] = useState("all");
     const [tablesData, setTablesData] = useState([]);
+    const [showAddModal, setShowAddModal] = useState(false);
+    const [newTableNo, setNewTableNo] = useState("");
+    const [newTableSeats, setNewTableSeats] = useState(4);
+
+    const { user } = useSelector((state) => state.user);
+    const isRestaurantAdmin = user?.role === "Restaurant Admin";
+
+    const fetchTables = async () => {
+        try {
+            const res = await apiRequest("/table");
+            if (res.success) {
+                setTablesData(res.data);
+            }
+        } catch (error) {
+            console.error("Error fetching tables:", error);
+        }
+    };
 
     useEffect(() => {
-        const fetchTables = async () => {
-            try {
-                const res = await apiRequest("/table");
-                if (res.success) {
-                    setTablesData(res.data);
-                }
-            } catch (error) {
-                console.error("Error fetching tables:", error);
-            }
-        };
         fetchTables();
     }, []);
+
+    const handleAddTable = async (e) => {
+        e.preventDefault();
+        if (!newTableNo) {
+            toast.error("Please enter a table number.");
+            return;
+        }
+        try {
+            const res = await apiRequest("/table", {
+                method: "POST",
+                body: {
+                    tableNo: newTableNo,
+                    seats: Number(newTableSeats)
+                }
+            });
+            if (res.success) {
+                toast.success(`Table ${newTableNo} added successfully!`);
+                setShowAddModal(false);
+                setNewTableNo("");
+                setNewTableSeats(4);
+                fetchTables();
+            }
+        } catch (error) {
+            console.error(error);
+            toast.error(error.message || "Failed to add table.");
+        }
+    };
 
     const filteredTables = status === "all"
         ? tablesData
@@ -39,6 +77,14 @@ const Tables = () => {
                 <div className="flex items-center gap-4">
                     <BackButton />
                     <h1 className="text-[#f5f5f5] text-xl font-bold tracking-wide">Tables</h1>
+                    {isRestaurantAdmin && (
+                        <button
+                            onClick={() => setShowAddModal(true)}
+                            className="bg-yellow-400 hover:bg-yellow-300 text-gray-950 px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-md select-none border border-transparent"
+                        >
+                            <FaPlus size={10} /> Add Table
+                        </button>
+                    )}
                 </div>
                 <div className="flex items-center gap-2">
                     <button onClick={() => setStatus("all")} className={getTabClass("all")}>
@@ -65,10 +111,54 @@ const Tables = () => {
                             initials={table.currentOrder?.customerDetails?.name}
                             seats={table.seats}
                             currentOrder={table.currentOrder}
+                            onDelete={fetchTables}
                         />
                     ))}
                 </div>
             </div>
+
+            {/* Add Table Modal */}
+            {showAddModal && (
+                <Modal isOpen={showAddModal} onClose={() => setShowAddModal(false)} title="Add New Table">
+                    <form onSubmit={handleAddTable} className="flex flex-col gap-4">
+                        <div>
+                            <label className="block text-[11px] font-semibold text-[#ababab] uppercase tracking-wider mb-2">Table Number/Name</label>
+                            <div className="flex items-center rounded-xl p-3 bg-[#141414] border border-[#2d2d2d]/80 focus-within:border-[#f6b100]/50 transition-colors">
+                                <input 
+                                    value={newTableNo} 
+                                    onChange={(e) => setNewTableNo(e.target.value)}
+                                    type="text"
+                                    placeholder="e.g. Table 16"
+                                    className="bg-transparent flex-1 text-xs text-[#f5f5f5] placeholder-[#555] focus:outline-none w-full"
+                                    required
+                                />
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-[11px] font-semibold text-[#ababab] uppercase tracking-wider mb-2">Capacity (Seats)</label>
+                            <div className="flex items-center rounded-xl p-3 bg-[#141414] border border-[#2d2d2d]/80 focus-within:border-[#f6b100]/50 transition-colors">
+                                <input 
+                                    value={newTableSeats} 
+                                    onChange={(e) => setNewTableSeats(e.target.value)}
+                                    type="number"
+                                    min="1"
+                                    max="20"
+                                    placeholder="Number of seats"
+                                    className="bg-transparent flex-1 text-xs text-[#f5f5f5] placeholder-[#555] focus:outline-none w-full"
+                                    required
+                                />
+                            </div>
+                        </div>
+                        <button
+                            type="submit"
+                            className="w-full mt-4 bg-[#f6b100] text-[#1a1a1a] py-3 rounded-xl hover:bg-[#e0a100] active:scale-[0.98] transition-all font-bold text-xs tracking-wider uppercase cursor-pointer"
+                        >
+                            Add Table
+                        </button>
+                    </form>
+                </Modal>
+            )}
+
             <BottomNav />
         </section>
     );

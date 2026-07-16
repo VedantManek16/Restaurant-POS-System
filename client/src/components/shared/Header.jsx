@@ -9,6 +9,21 @@ import { formatTime12Hr } from "../../utils/dateFormatter";
 import { BiSolidDish } from "react-icons/bi";
 import CreateOrderModal from "./CreateOrderModal";
 
+const Clock = () => {
+  const [time, setTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  return (
+    <div className="text-xs font-semibold text-[#ababab] bg-[#1f1f1f] border border-[#2d2d2d]/30 px-3.5 py-2 rounded-xl select-none">
+      {formatTime12Hr(time)}
+    </div>
+  );
+};
+
 const Header = ({ toggleSidebar, isSidebarCollapsed }) => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -16,12 +31,6 @@ const Header = ({ toggleSidebar, isSidebarCollapsed }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const dropdownRef = useRef(null);
-  const [time, setTime] = useState(new Date());
-
-  useEffect(() => {
-    const timer = setInterval(() => setTime(new Date()), 1000);
-    return () => clearInterval(timer);
-  }, []);
 
   const handleLogout = async () => {
     try {
@@ -87,9 +96,7 @@ const Header = ({ toggleSidebar, isSidebarCollapsed }) => {
         )}
 
         {/* Time display */}
-        <div className="text-xs font-semibold text-[#ababab] bg-[#1f1f1f] border border-[#2d2d2d]/30 px-3.5 py-2 rounded-xl select-none">
-          {formatTime12Hr(time)}
-        </div>
+        <Clock />
 
         <div className="bg-[#1f1f1f] rounded-xl p-2 cursor-pointer hover:bg-[#262626] transition-colors border border-[#2d2d2d]/30">
           <FaBell className="text-[#f5f5f5] text-lg" />

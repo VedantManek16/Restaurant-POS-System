@@ -10,7 +10,8 @@ import {
   FaCog, 
   FaSignOutAlt,
   FaChevronLeft,
-  FaChevronRight
+  FaChevronRight,
+  FaUtensils
 } from "react-icons/fa";
 import { MdOutlineReorder, MdTableBar } from "react-icons/md";
 import { BiSolidDish } from "react-icons/bi";
@@ -25,7 +26,8 @@ const iconMap = {
   MdOutlineReorder: MdOutlineReorder,
   MdTableBar: MdTableBar,
   FaChartBar: FaChartBar,
-  FaCog: FaCog
+  FaCog: FaCog,
+  FaUtensils: FaUtensils
 };
 
 const Sidebar = ({ isCollapsed, toggleSidebar }) => {

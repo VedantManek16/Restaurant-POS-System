@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { BrowserRouter as Router, Routes, Route, Outlet, Navigate, useLocation } from "react-router-dom"
 import { useSelector } from "react-redux"
-import { Landing, Home, Auth, Orders, Tables, Menu, NotFound, AccessDenied, Staff, Settings, Reports } from "./pages"
+import { Landing, Home, Auth, Orders, Tables, Menu, NotFound, AccessDenied, Staff, Settings, Reports, MenuManagement } from "./pages"
 import Header from "./components/shared/Header"
 import Sidebar from "./components/shared/Sidebar"
 import { ROUTE_ACCESS } from "./constants/roles"
@@ -81,6 +81,7 @@ const App = () => {
             <Route path="/orders" element={<Orders />} />
             <Route path="/tables" element={<Tables />} />
             <Route path="/menu" element={<Menu />} />
+            <Route path="/menu-management" element={<MenuManagement />} />
             <Route path="/staff" element={<Staff />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/reports" element={<Reports />} />

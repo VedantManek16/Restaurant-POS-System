@@ -1,4 +1,5 @@
-import { useSelector } from "react-redux"
+import { useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import Greetings from "../components/home/Greetings"
 import BottomNav from "../components/shared/BottomNav"
 import MiniCard from "../components/home/MiniCard"
@@ -19,9 +20,16 @@ const MOCK_RESTAURANTS = [
 ];
 
 const Home = () => {
+  const navigate = useNavigate();
   const { user } = useSelector((state) => state.user);
   const isSuperAdmin = user?.role === "Super Admin";
   const isRestaurantAdmin = user?.role === "Restaurant Admin";
+
+  useEffect(() => {
+    if (user?.role === "Kitchen Staff") {
+      navigate("/orders");
+    }
+  }, [user, navigate]);
   
   const [restaurants, setRestaurants] = useState(MOCK_RESTAURANTS);
   const [activeDropdownId, setActiveDropdownId] = useState(null);

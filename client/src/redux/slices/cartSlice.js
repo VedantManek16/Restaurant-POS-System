@@ -2,6 +2,7 @@ import { createSlice } from '@reduxjs/toolkit';
 
 const initialState = {
     cartItems: [], // Each item: { id, menuId, name, price, category, quantity, notes }
+    sessionItems: [], // Placed items in the current dining session: { id, name, price, quantity, status }
 };
 
 export const cartSlice = createSlice({
@@ -59,6 +60,12 @@ export const cartSlice = createSlice({
         loadCart: (state, action) => {
             state.cartItems = action.payload || [];
         },
+        loadSessionItems: (state, action) => {
+            state.sessionItems = action.payload || [];
+        },
+        clearSessionItems: (state) => {
+            state.sessionItems = [];
+        },
     },
 });
 
@@ -69,6 +76,8 @@ export const {
     updateItemNote,
     clearCart,
     loadCart,
+    loadSessionItems,
+    clearSessionItems,
 } = cartSlice.actions;
 
 export default cartSlice.reducer;

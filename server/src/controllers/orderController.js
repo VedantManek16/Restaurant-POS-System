@@ -73,11 +73,16 @@ export const updateOrder = async (req, res, next) => {
       return next(error);
     }
 
-    if (orderStatus === "Completed" && order.table) {
+    if (orderStatus === "Cancelled" && order.table) {
       await Table.findByIdAndUpdate(order.table, {
         status: "Available",
         currentOrder: null
       });
+      // Also update any active table session to Cancelled
+      await mongoose.model("TableSession").findOneAndUpdate(
+        { table: order.table, status: "Active" },
+        { status: "Cancelled" }
+      );
     }
 
     res

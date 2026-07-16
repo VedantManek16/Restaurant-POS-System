@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { clearCart } from "../../redux/slices/cartSlice";
-import { removeCustomerDetails } from "../../redux/slices/customerSlice";
+import { clearCart, loadSessionItems, clearSessionItems } from "../../redux/slices/cartSlice";
+import { removeCustomerDetails, updateTable } from "../../redux/slices/customerSlice";
 import { apiRequest } from "../../utils/api";
 import { toast } from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
+import { generateInvoicePDF } from "../../utils/generateInvoice";
 
 function loadScript(src) {
     return new Promise((resolve) => {
@@ -21,21 +23,29 @@ function loadScript(src) {
 
 const Bill = () => {
     const dispatch = useDispatch();
+    const navigate = useNavigate();
     const { user } = useSelector((state) => state.user);
     const isWaiter = user?.role === "Waiter";
 
     const [paymentMethod, setPaymentMethod] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [taxPercent, setTaxPercent] = useState(18); // default fallback 18% GST
+    const [restaurantName, setRestaurantName] = useState("Taste Hub");
     const cartItems = useSelector((state) => state.cart.cartItems);
+    const sessionItems = useSelector((state) => state.cart.sessionItems || []);
     const customerData = useSelector((state) => state.customer);
 
     useEffect(() => {
         const fetchTaxSettings = async () => {
             try {
                 const res = await apiRequest("/settings");
-                if (res.success && res.data && res.data.taxRate !== undefined) {
-                    setTaxPercent(res.data.taxRate);
+                if (res.success && res.data) {
+                    if (res.data.taxRate !== undefined) {
+                        setTaxPercent(res.data.taxRate);
+                    }
+                    if (res.data.restaurantName) {
+                        setRestaurantName(res.data.restaurantName);
+                    }
                 }
             } catch (error) {
                 console.error("Error loading tax settings:", error);
@@ -44,75 +54,146 @@ const Bill = () => {
         fetchTaxSettings();
     }, []);
 
-    // Calculations
-    const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    // Calculations: subtotal, tax, total consolidated for both placed and new cart items
+    const cartSubtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const sessionSubtotal = sessionItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const subtotal = cartSubtotal + sessionSubtotal;
+
     const taxRate = taxPercent / 100;
     const taxAmount = subtotal * taxRate;
     const totalWithTax = subtotal + taxAmount;
-    const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+    const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0) + sessionItems.reduce((sum, item) => sum + item.quantity, 0);
+
+    const triggerPDFInvoice = (payMethod = "Cash") => {
+        const allItems = [...sessionItems, ...cartItems];
+        if (allItems.length === 0) return;
+
+        generateInvoicePDF({
+            restaurantName,
+            orderId: customerData?.orderId || "N/A",
+            customerName: customerData?.customerName || "Walk-in Customer",
+            customerPhone: customerData?.customerMobileNumber || "",
+            tableNumber: customerData?.tableNumber || "Takeaway",
+            date: new Date().toLocaleString(),
+            items: allItems,
+            subtotal,
+            taxPercent,
+            taxAmount,
+            total: totalWithTax,
+            paymentMethod: payMethod
+        });
+    };
 
     const submitOrder = async (orderData, isKitchenOnly) => {
         try {
-            let orderRes;
-            if (customerData.activeOrderId) {
-                // Update existing active order
-                orderRes = await apiRequest(`/order/${customerData.activeOrderId}`, {
-                    method: "PUT",
-                    body: orderData
-                });
-            } else {
-                // Create new order
-                orderRes = await apiRequest("/order", {
-                    method: "POST",
-                    body: orderData
-                });
-            }
-
-            if (orderRes.success) {
-                const targetOrderId = customerData.activeOrderId || orderRes.data._id;
-
-                // Handle table status update
-                if (customerData.tableId) {
-                    const nextTableStatus = isKitchenOnly ? "Booked" : "Available";
-                    await apiRequest(`/table/${customerData.tableId}`, {
-                        method: "PUT",
+            if (isKitchenOnly) {
+                // Placing new kitchen order tickets
+                let sessionRes;
+                if (customerData.activeOrderId) {
+                    // Append order to active Table Session
+                    sessionRes = await apiRequest(`/session/${customerData.activeOrderId}/order`, {
+                        method: "POST",
                         body: {
-                            status: nextTableStatus,
-                            orderId: isKitchenOnly ? targetOrderId : null
+                            items: orderData.items,
+                            bills: orderData.bills,
+                            orderId: orderData.orderId
+                        }
+                    });
+                } else {
+                    // Create new Table Session
+                    sessionRes = await apiRequest("/session", {
+                        method: "POST",
+                        body: {
+                            tableId: customerData.tableId,
+                            customerDetails: orderData.customerDetails,
+                            items: orderData.items,
+                            bills: orderData.bills,
+                            orderId: orderData.orderId
                         }
                     });
                 }
 
-                toast.success(
-                    isKitchenOnly
-                        ? "Order sent to kitchen successfully!"
-                        : "Order placed & settled successfully!"
-                );
+                if (sessionRes.success) {
+                    const sessionData = sessionRes.data;
+                    toast.success("Order sent to kitchen successfully!");
 
-                // Reset session
-                dispatch(clearCart());
-                dispatch(removeCustomerDetails());
-                setPaymentMethod(null);
+                    // Re-consolidate active session items
+                    const sessionOrders = sessionData.orders || [];
+                    const sessionItemsList = [];
+                    sessionOrders.forEach(order => {
+                        const orderItems = order.items || [];
+                        orderItems.forEach(item => {
+                            sessionItemsList.push({
+                                id: item.id,
+                                name: item.name,
+                                price: item.pricePerQuantity || item.price,
+                                quantity: item.quantity,
+                                notes: item.notes || "",
+                                status: order.orderStatus || "In Progress"
+                            });
+                        });
+                    });
+
+                    dispatch(loadSessionItems(sessionItemsList));
+                    dispatch(clearCart()); // clear draft cart
+                    dispatch(updateTable({
+                        activeOrderId: sessionData._id,
+                        orderId: sessionData.orders?.[0]?.orderId || ""
+                    }));
+                }
+            } else {
+                // Processing final session payment checkout (Cashier/Admin)
+                if (!customerData.activeOrderId) {
+                    toast.error("No active session found to close.");
+                    return;
+                }
+
+                const payRes = await apiRequest(`/session/${customerData.activeOrderId}/pay`, {
+                    method: "POST",
+                    body: {
+                        paymentMethod: orderData.paymentMethod,
+                        paymentData: orderData.paymentData
+                    }
+                });
+
+                if (payRes.success) {
+                    toast.success("Table session completed and payment processed!");
+                    
+                    // Trigger PDF Invoice Auto Download
+                    triggerPDFInvoice(orderData.paymentMethod);
+
+                    dispatch(clearCart());
+                    dispatch(clearSessionItems());
+                    dispatch(removeCustomerDetails());
+                    setPaymentMethod(null);
+                    navigate("/tables");
+                }
             }
         } catch (error) {
             console.error(error);
-            toast.error(error.message || "Failed to submit order.");
+            toast.error(error.message || "Failed to submit POS request.");
         } finally {
             setIsSubmitting(false);
         }
     };
 
     const handlePlaceOrder = async (kitchenOnly = false) => {
-        if (cartItems.length === 0 || isSubmitting) return;
-
         const isKitchenOnly = isWaiter || kitchenOnly;
 
+        if (isKitchenOnly && cartItems.length === 0) {
+            toast.error("Please add new items to the cart before sending to kitchen.");
+            return;
+        }
+
+        if (isSubmitting) return;
+
         if (!isKitchenOnly && !paymentMethod) {
-            toast.error("Please select a payment method before placing the order.");
+            toast.error("Please select a payment method before completing checkout.");
             return;
         }
 
         setIsSubmitting(true);
+
         const orderData = {
             orderId: customerData.orderId,
             customerDetails: {
@@ -120,11 +201,10 @@ const Bill = () => {
                 phone: customerData.customerMobileNumber || "0000000000",
                 guests: customerData.guests || 1
             },
-            orderStatus: isKitchenOnly ? "In Progress" : "Completed",
             bills: {
-                total: subtotal,
-                tax: taxAmount,
-                totalWithTax: totalWithTax
+                total: cartSubtotal,
+                tax: cartSubtotal * taxRate,
+                totalWithTax: cartSubtotal + (cartSubtotal * taxRate)
             },
             items: cartItems.map(item => ({
                 id: item.id,
@@ -201,42 +281,13 @@ const Bill = () => {
                 setIsSubmitting(false);
             }
         } else {
-            // Cash or kitchenOnly path
+            // Cash checkout or kitchenOnly path
             await submitOrder(orderData, isKitchenOnly);
         }
     };
 
     const handlePrintReceipt = () => {
-        if (cartItems.length === 0) return;
-
-        const itemsList = cartItems
-            .map(item => `• ${item.name} x${item.quantity} - ₹${(item.price * item.quantity).toFixed(2)}${item.notes ? ` [Note: ${item.notes}]` : ""}`)
-            .join('\n');
-
-        const customerName = customerData?.customerName || "Walk-in Customer";
-        const tableNumber = customerData?.tableNumber || "Takeaway";
-        const orderId = customerData?.orderId || "N/A";
-
-        alert(
-            `====================================\n` +
-            `            RECEIPT SUMMARY         \n` +
-            `====================================\n` +
-            `Order ID   : ${orderId}\n` +
-            `Customer   : ${customerName}\n` +
-            `Table      : ${tableNumber}\n` +
-            `Date       : ${new Date().toLocaleString()}\n` +
-            `------------------------------------\n` +
-            `${itemsList}\n` +
-            `------------------------------------\n` +
-            `Subtotal   : ₹${subtotal.toFixed(2)}\n` +
-            `Tax (${taxPercent}%): ₹${taxAmount.toFixed(2)}\n` +
-            `------------------------------------\n` +
-            `TOTAL      : ₹${totalWithTax.toFixed(2)}\n` +
-            `Payment    : ${paymentMethod || "Not Selected"}\n` +
-            `====================================\n` +
-            `     Thank you for your order!      \n` +
-            `====================================`
-        );
+        triggerPDFInvoice(paymentMethod || "Cash");
     };
 
     return (
@@ -261,8 +312,8 @@ const Bill = () => {
                 <div className="flex items-center gap-3 mt-4">
                     <button
                         onClick={() => setPaymentMethod("Cash")}
-                        disabled={cartItems.length === 0}
-                        className={`flex-1 py-2.5 rounded-xl font-semibold text-sm transition-all border ${cartItems.length === 0
+                        disabled={cartItems.length === 0 && sessionItems.length === 0}
+                        className={`flex-1 py-2.5 rounded-xl font-semibold text-sm transition-all border ${cartItems.length === 0 && sessionItems.length === 0
                             ? "bg-[#1a1a1a]/40 border-[#2d2d2d]/20 text-[#666666] cursor-not-allowed opacity-50"
                             : paymentMethod === "Cash"
                                 ? "bg-[#f6b100]/10 border-[#f6b100] text-[#f6b100] cursor-pointer"
@@ -273,8 +324,8 @@ const Bill = () => {
                     </button>
                     <button
                         onClick={() => setPaymentMethod("Online")}
-                        disabled={cartItems.length === 0}
-                        className={`flex-1 py-2.5 rounded-xl font-semibold text-sm transition-all border ${cartItems.length === 0
+                        disabled={cartItems.length === 0 && sessionItems.length === 0}
+                        className={`flex-1 py-2.5 rounded-xl font-semibold text-sm transition-all border ${cartItems.length === 0 && sessionItems.length === 0
                             ? "bg-[#1a1a1a]/40 border-[#2d2d2d]/20 text-[#666666] cursor-not-allowed opacity-50"
                             : paymentMethod === "Online"
                                 ? "bg-[#f6b100]/10 border-[#f6b100] text-[#f6b100] cursor-pointer"
@@ -291,13 +342,14 @@ const Bill = () => {
                 {!isWaiter && (
                     <button
                         onClick={handlePrintReceipt}
-                        disabled={cartItems.length === 0}
-                        className={`w-full py-2.5 rounded-xl font-semibold text-xs transition-all text-center border ${cartItems.length === 0
-                            ? "bg-[#025cca]/5 border-[#025cca]/10 text-[#666666] cursor-not-allowed opacity-50"
-                            : "bg-[#025cca]/10 hover:bg-[#025cca]/20 border-[#025cca]/30 text-[#025cca] hover:text-white cursor-pointer active:scale-95"
-                            }`}
+                        disabled={cartItems.length === 0 && sessionItems.length === 0}
+                        className={`w-full py-2.5 rounded-xl font-semibold text-xs transition-all text-center border ${
+                            cartItems.length === 0 && sessionItems.length === 0
+                                ? "bg-[#025cca]/5 border-[#025cca]/10 text-[#666666] cursor-not-allowed opacity-50"
+                                : "bg-[#025cca]/10 hover:bg-[#025cca]/20 border-[#025cca]/30 text-[#025cca] hover:text-white cursor-pointer active:scale-95"
+                        }`}
                     >
-                        Print Receipt
+                        Download PDF Invoice
                     </button>
                 )}
                 
@@ -317,13 +369,24 @@ const Bill = () => {
 
                     <button
                         onClick={() => handlePlaceOrder(false)}
-                        disabled={cartItems.length === 0}
+                        disabled={
+                            isWaiter 
+                                ? cartItems.length === 0 
+                                : customerData.tableId 
+                                    ? (cartItems.length === 0 && sessionItems.length === 0) 
+                                    : cartItems.length === 0
+                        }
                         className={`py-3 rounded-xl font-bold text-xs transition-all text-center shadow-md shadow-[#f6b100]/5 ${
                             isWaiter ? "w-full" : "flex-1"
-                        } ${cartItems.length === 0
+                        } ${
+                            (isWaiter 
+                                ? cartItems.length === 0 
+                                : customerData.tableId 
+                                    ? (cartItems.length === 0 && sessionItems.length === 0) 
+                                    : cartItems.length === 0)
                                 ? "bg-[#2d2d2d] text-[#666] cursor-not-allowed opacity-50"
                                 : "bg-[#f6b100] hover:bg-[#f6b100]/90 text-[#1f1f1f] cursor-pointer active:scale-95"
-                            }`}
+                        }`}
                     >
                         {isWaiter ? "Send to Kitchen" : (customerData.tableId ? "Pay & Complete" : "Place Order")}
                     </button>

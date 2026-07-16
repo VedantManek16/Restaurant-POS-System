@@ -30,7 +30,9 @@ export const getTables = async (req, res, next) => {
   try {
     const tables = await Table.find().populate({
       path: "currentOrder",
-      select: "customerDetails"
+      populate: {
+        path: "orders"
+      }
     });
     res.status(200).json({ success: true, data: tables });
   } catch (error) {
@@ -61,6 +63,33 @@ export const updateTable = async (req, res, next) => {
 
     res.status(200).json({ success: true, message: "Table updated!", data: table });
 
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteTable = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      const error = createHttpError(400, "Invalid table ID!");
+      return next(error);
+    }
+
+    const table = await Table.findById(id);
+    if (!table) {
+      const error = createHttpError(404, "Table not found!");
+      return next(error);
+    }
+
+    if (table.status?.toLowerCase() === "booked") {
+      const error = createHttpError(400, "Cannot delete a booked table!");
+      return next(error);
+    }
+
+    await Table.findByIdAndDelete(id);
+    res.status(200).json({ success: true, message: "Table deleted successfully!" });
   } catch (error) {
     next(error);
   }

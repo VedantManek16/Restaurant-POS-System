@@ -8,7 +8,11 @@ const OrderList = ({ order }) => {
     const itemsCount = order.items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
     const tableNo = order.table?.tableNo || "N/A";
     const status = order.orderStatus || "In Progress";
-    const isReady = status.toLowerCase() === "ready";
+    const statusLower = status.toLowerCase();
+    const isCancelled = statusLower === "cancelled";
+    const isCompleted = statusLower === "completed";
+    const isServed = statusLower === "served";
+    const isReady = statusLower === "ready";
 
     return (
         <div className="flex items-center gap-4 py-2 border-b border-[#2d2d2d]/20 last:border-b-0">
@@ -33,18 +37,49 @@ const OrderList = ({ order }) => {
 
                 {/* Status Indicator */}
                 <div className="flex flex-col items-start gap-0.5 shrink-0 text-right">
-                    {isReady ? (
+                    {isCancelled && (
                         <>
-                            <p className="text-[#02ca3a] text-xs font-semibold flex items-center gap-1">
+                            <p className="text-red-400 text-xs font-semibold flex items-center gap-1">
+                                Cancelled
+                            </p>
+                            <p className="text-[#ababab] text-[10px] flex items-center gap-1.5 mt-0.5">
+                                Voided & closed
+                            </p>
+                        </>
+                    )}
+                    {isCompleted && (
+                        <>
+                            <p className="text-emerald-400 text-xs font-semibold flex items-center gap-1">
+                                <FaCheckDouble className="text-[10px]" /> Paid
+                            </p>
+                            <p className="text-[#ababab] text-[10px] flex items-center gap-1.5 mt-0.5">
+                                Paid & closed
+                            </p>
+                        </>
+                    )}
+                    {isServed && (
+                        <>
+                            <p className="text-[#025cca] text-xs font-semibold flex items-center gap-1">
+                                <FaCheckDouble className="text-[10px]" /> Served
+                            </p>
+                            <p className="text-yellow-400 text-[10px] flex items-center gap-1.5 mt-0.5">
+                                Awaiting Payment
+                            </p>
+                        </>
+                    )}
+                    {isReady && (
+                        <>
+                            <p className="text-[#f6b100] text-xs font-semibold flex items-center gap-1">
                                 <FaCheckDouble className="text-[10px]" /> Ready
                             </p>
                             <p className="text-[#ababab] text-[10px] flex items-center gap-1.5 mt-0.5">
-                                <FaCircle className="text-[#02ca3a] text-[8px]" /> Ready to serve
+                                Ready to serve
                             </p>
                         </>
-                    ) : (
+                    )}
+                    {!isCancelled && !isCompleted && !isServed && !isReady && (
                         <>
-                            <p className="text-[#f6b100] text-xs font-semibold flex items-center gap-1">
+                            <p className="text-[#ababab] text-xs font-semibold flex items-center gap-1">
                                 <FaCircle className="text-[8px] animate-pulse" /> Preparing
                             </p>
                             <p className="text-[#ababab] text-[10px] flex items-center gap-1.5 mt-0.5">

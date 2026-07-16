@@ -10,7 +10,7 @@ const tableSchema = new mongoose.Schema({
         type: Number,
         required: true
     },
-    currentOrder: { type: mongoose.Schema.Types.ObjectId, ref: "Order" }
+    currentOrder: { type: mongoose.Schema.Types.ObjectId, ref: "TableSession" }
 });
 
 export default mongoose.model("Table", tableSchema);

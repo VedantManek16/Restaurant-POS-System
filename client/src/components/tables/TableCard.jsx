@@ -1,59 +1,80 @@
-import { FaCircle, FaChair } from "react-icons/fa";
+import { FaCircle, FaChair, FaTrash } from "react-icons/fa";
 import { getInitials } from "../../utils/getInitials";
 import { useNavigate } from "react-router-dom";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { updateTable } from "../../redux/slices/customerSlice";
-import { clearCart, loadCart } from "../../redux/slices/cartSlice";
-import { menus } from "../../constants";
+import { clearCart, loadCart, loadSessionItems, clearSessionItems } from "../../redux/slices/cartSlice";
+import { apiRequest } from "../../utils/api";
+import { toast } from "react-hot-toast";
 
-const TableCard = ({ name, status, initials, seats, id, currentOrder }) => {
+const TableCard = ({ name, status, initials, seats, id, currentOrder, onDelete }) => {
     const navigate = useNavigate();
     const isBooked = status?.toLowerCase() === "booked";
     const dispatch = useDispatch();
+    const { user } = useSelector((state) => state.user);
+    const isRestaurantAdmin = user?.role === "Restaurant Admin";
+
+    const handleDelete = async (e) => {
+        e.stopPropagation();
+        if (window.confirm(`Are you sure you want to delete ${name}?`)) {
+            try {
+                const res = await apiRequest(`/table/${id}`, {
+                    method: "DELETE"
+                });
+                if (res.success) {
+                    toast.success(`Table ${name} deleted successfully.`);
+                    if (onDelete) onDelete();
+                }
+            } catch (error) {
+                console.error(error);
+                toast.error(error.message || "Failed to delete table.");
+            }
+        }
+    };
 
     const handleClick = () => {
         if (isBooked && currentOrder) {
-            // Restore active session details
+            // Restore active session details (currentOrder is the TableSession object)
             dispatch(updateTable({
                 tableNumber: name,
                 tableId: id,
-                activeOrderId: currentOrder._id,
-                orderId: currentOrder.orderId,
+                activeOrderId: currentOrder._id, // Active Session ID
+                orderId: currentOrder.orders?.[0]?.orderId || "",
                 customerName: currentOrder.customerDetails?.name,
                 customerMobileNumber: currentOrder.customerDetails?.phone,
                 guests: currentOrder.customerDetails?.guests
             }));
 
-            const cartItems = (currentOrder.items || []).map(item => {
-                let foundMenuId = "all";
-                for (const m of menus) {
-                    const match = m.items.find(i => i.id === item.id);
-                    if (match) {
-                        foundMenuId = m.id;
-                        break;
-                    }
-                }
-                return {
-                    id: item.id,
-                    name: item.name,
-                    price: item.pricePerQuantity,
-                    quantity: item.quantity,
-                    notes: item.notes || "",
-                    menuId: foundMenuId
-                };
+            // Consolidate all items from all orders in this session
+            const sessionOrders = currentOrder.orders || [];
+            const sessionItemsList = [];
+            sessionOrders.forEach(order => {
+                const orderItems = order.items || [];
+                orderItems.forEach(item => {
+                    sessionItemsList.push({
+                        id: item.id,
+                        name: item.name,
+                        price: item.pricePerQuantity || item.price,
+                        quantity: item.quantity,
+                        notes: item.notes || "",
+                        status: order.orderStatus || "In Progress"
+                    });
+                });
             });
 
-            dispatch(loadCart(cartItems));
+            dispatch(loadSessionItems(sessionItemsList));
+            dispatch(clearCart()); // Start with a fresh cart for additional orders
             navigate(`/menu`);
         } else {
             // Start fresh session
             dispatch(updateTable({ tableNumber: name, tableId: id, activeOrderId: null }));
             dispatch(clearCart());
+            dispatch(clearSessionItems());
             navigate(`/menu`);
         }
     };
     return (
-        <div onClick={handleClick} className="w-full max-w-[340px] bg-[#1a1a1a] p-4 rounded-xl border border-[#2d2d2d]/30 shadow-md flex flex-col hover:bg-[#202020] transition-colors duration-200">
+        <div onClick={handleClick} className="w-full max-w-[340px] bg-[#1a1a1a] p-4 rounded-xl border border-[#2d2d2d]/30 shadow-md flex flex-col hover:bg-[#202020] transition-colors duration-200 cursor-pointer">
             {/* Header info */}
             <div className="flex items-center justify-between">
                 <h1 className="text-[#f5f5f5] text-sm font-semibold tracking-wide">{name}</h1>
@@ -96,9 +117,20 @@ const TableCard = ({ name, status, initials, seats, id, currentOrder }) => {
             {/* Footer containing seats capacity */}
             <div className="flex justify-between items-center mt-3">
                 <h1 className="text-[#ababab] text-[11px] font-medium">Capacity</h1>
-                <p className="text-[#f5f5f5] text-xs font-semibold flex items-center gap-1.5">
-                    <FaChair className="text-[#ababab] text-[11px]" /> {seats || 0} Seats
-                </p>
+                <div className="flex items-center gap-3">
+                    <p className="text-[#f5f5f5] text-xs font-semibold flex items-center gap-1.5">
+                        <FaChair className="text-[#ababab] text-[11px]" /> {seats || 0} Seats
+                    </p>
+                    {isRestaurantAdmin && !isBooked && (
+                        <button
+                            onClick={handleDelete}
+                            className="text-red-400/80 hover:text-red-400 p-1 hover:bg-red-500/10 rounded transition-all cursor-pointer border border-transparent"
+                            title="Delete Table"
+                        >
+                            <FaTrash size={11} />
+                        </button>
+                    )}
+                </div>
             </div>
         </div>
     );

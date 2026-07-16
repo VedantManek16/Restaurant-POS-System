@@ -9,30 +9,32 @@ const MenuItemCard = ({ item, quantity, onIncrement, onDecrement }) => {
                     : 'border-[#2d2d2d]/30'
                 }`}
         >
-            <div className="flex items-start w-full">
-                <div className="flex flex-col gap-1 min-w-0">
+            <div className="flex items-start justify-between w-full gap-2">
+                <div className="flex flex-col gap-1 min-w-0 flex-1">
                     <h1 className="text-[#f5f5f5] text-[15px] font-semibold tracking-wide leading-tight truncate" title={item.name}>
                         {item.name}
                     </h1>
-                    {item.category && (
+                    {(item.category || item.isVeg !== undefined) && (
                         <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md border w-fit flex items-center gap-1.5 ${
-                            item.category === "Vegetarian"
+                            (item.category === "Vegetarian" || item.isVeg === true)
                                 ? 'bg-green-500/10 text-green-400 border-green-500/20'
-                                : item.category === "Non-Vegetarian"
-                                    ? 'bg-red-500/10 text-red-400 border-red-500/20'
-                                    : 'bg-blue-500/10 text-blue-400 border-blue-500/20'
+                                : 'bg-red-500/10 text-red-400 border-red-500/20'
                         }`}>
                             <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                                item.category === "Vegetarian"
+                                (item.category === "Vegetarian" || item.isVeg === true)
                                     ? 'bg-green-400 animate-pulse'
-                                    : item.category === "Non-Vegetarian"
-                                        ? 'bg-red-400'
-                                        : 'bg-blue-400'
+                                    : 'bg-red-400'
                             }`} />
-                            {item.category}
+                            {(item.category === "Vegetarian" || item.isVeg === true) ? "Vegetarian" : "Non-Vegetarian"}
                         </span>
                     )}
                 </div>
+
+                {item.image && (
+                    <div className="w-12 h-12 rounded-lg bg-[#252525] border border-white/5 shrink-0 overflow-hidden shadow-inner">
+                        <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                    </div>
+                )}
             </div>
             <div className="flex items-center justify-between w-full mt-auto">
                 <p className="text-[#f5f5f5] text-xl font-bold tracking-tight">

@@ -10,7 +10,8 @@ const DEFAULT_EMPLOYEES = [
   { name: "Super Admin", email: "superadmin@restro.com", password: "RestroDesk!2026", role: "Super Admin", phone: "1111111111" },
   { name: "Taste Hub Admin", email: "admin@restro.com", password: "RestroDesk!2026", role: "Restaurant Admin", phone: "2222222222" },
   { name: "Sarah Cashier", email: "cashier@restro.com", password: "RestroDesk!2026", role: "Cashier", phone: "3333333333" },
-  { name: "John Waiter", email: "waiter@restro.com", password: "RestroDesk!2026", role: "Waiter", phone: "4444444444" }
+  { name: "John Waiter", email: "waiter@restro.com", password: "RestroDesk!2026", role: "Waiter", phone: "4444444444" },
+  { name: "Chef Mario", email: "kitchen@restro.com", password: "RestroDesk!2026", role: "Kitchen Staff", phone: "8888888888" }
 ];
 
 const Login = () => {
@@ -143,7 +144,7 @@ const Login = () => {
 
         {showDemoMenu && (
           <div className="flex flex-wrap gap-2 mt-2 w-full justify-center animate-in fade-in slide-in-from-top-1 duration-150">
-            {["Super Admin", "Restaurant Admin", "Cashier", "Waiter"].map((role) => (
+            {["Super Admin", "Restaurant Admin", "Cashier", "Waiter", "Kitchen Staff"].map((role) => (
               <button
                 key={role}
                 type="button"

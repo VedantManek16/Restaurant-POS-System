@@ -10,6 +10,8 @@ import orderRoute from "./routes/orderRoute.js";
 import paymentRoute from "./routes/paymentRoute.js";
 import settingsRoute from "./routes/settingsRoute.js";
 import reportRoute from "./routes/reportRoute.js";
+import sessionRoute from "./routes/sessionRoute.js";
+import menuRoute from "./routes/menuRoute.js";
 
 connectDB();
 const PORT = config.port || 8000;
@@ -33,6 +35,8 @@ app.use("/api/order", orderRoute);
 app.use("/api/payment", paymentRoute);
 app.use("/api/settings", settingsRoute);
 app.use("/api/reports", reportRoute);
+app.use("/api/session", sessionRoute);
+app.use("/api/menu", menuRoute);
 
 // Global error handler
 app.use(globalErrorHandler);

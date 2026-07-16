@@ -17,8 +17,8 @@ const CustomerInfo = () => {
     return (
         <div className="flex items-center justify-between px-6 py-4 border-b border-[#2d2d2d]/30 shrink-0 bg-[#1c1c1c]/50">
             <div className="flex flex-col items-start gap-1">
-                <h1 className="text-sm text-[#f5f5f5] font-bold tracking-wide truncate max-w-[220px]">
-                    {name}
+                <h1 className="text-sm text-[#f5f5f5] font-bold tracking-wide truncate max-w-[240px]">
+                    {name} {customerData?.customerMobileNumber && <span className="text-[10px] text-[#ababab] font-normal font-mono ml-1.5">({customerData.customerMobileNumber})</span>}
                 </h1>
                 
                 {/* Meta details row */}
