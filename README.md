@@ -1,5 +1,7 @@
 # RestroDesk 🍽️
 
+**Live URL**: [https://restrodesk-vhkk.onrender.com/](https://restrodesk-vhkk.onrender.com/)
+
 RestroDesk is a modern, high-performance, and responsive multi-tenant **Restaurant Point of Sale (POS) & Billing System** built using the MERN stack (MongoDB, Express, React, Node.js). 
 
 It is designed to handle multiple outlets (tenants) under a single management system. RestroDesk provides restaurant operators, admins, cashiers, and waiters with unified workflows to manage orders, dining tables, categories, dishes, payments, and real-time kitchen tracking.
@@ -117,8 +119,9 @@ npm run dev
 
 ## 🚀 Live Deployment Configuration
 
-This repository is pre-configured to deploy seamlessly:
-* **Frontend**: Deploy on **Render** (as a **Static Site**) or **Vercel** pointing your root directory to `/client`. Set environment variable `VITE_API_URL` to your production API URL.
-* **Backend**: Deploy on **Render** (as a **Web Service**) pointing root to `/server`. Configure your environment variables, and set `FRONTEND_URL` to point to your live hosted client domain.
+This repository is pre-configured and deployed live:
+* **Live Application URL**: [https://restrodesk-vhkk.onrender.com/](https://restrodesk-vhkk.onrender.com/)
+* **Frontend**: Hosted on Render (as a Static Site).
+* **Backend**: Hosted on Render (as a Web Service).
 
 For a comprehensive step-by-step roadmap, configuration parameters, and whitelisting checklists, please refer to the [Production Deployment Roadmap](C:/Users/vedan/.gemini/antigravity-ide/brain/19802d08-d2bc-4e2a-b2b6-aeba07e93fb4/deployment_roadmap.md) artifact.
