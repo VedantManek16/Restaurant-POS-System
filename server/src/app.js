@@ -23,7 +23,11 @@ app.use(cors({
     credentials: true
 }));
 app.use(cookieParser());
-app.use(express.json());
+app.use(express.json({
+    verify: (req, res, buf) => {
+        req.rawBody = buf;
+    }
+}));
 
 app.get("/", (req, res) => {
     res.json({ message: "Restaurant POS API is running" });

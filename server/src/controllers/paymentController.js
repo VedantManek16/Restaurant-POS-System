@@ -52,7 +52,7 @@ export const webHookVerification = async (req, res, next) => {
     const secret = config.razorpyWebhookSecret;
     const signature = req.headers["x-razorpay-signature"];
 
-    const body = JSON.stringify(req.body);
+        const body = req.rawBody || JSON.stringify(req.body);
 
     const expectedSignature = crypto
       .createHmac("sha256", secret)

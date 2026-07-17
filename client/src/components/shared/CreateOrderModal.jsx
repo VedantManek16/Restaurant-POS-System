@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { setCustomerDetails } from "../../redux/slices/customerSlice";
+import { clearCart, clearSessionItems } from "../../redux/slices/cartSlice";
 import Modal from "./Modal";
 import { PhoneInput } from "@/components/ui/phone-input";
 
@@ -25,6 +26,8 @@ const CreateOrderModal = ({ isOpen, onClose }) => {
     const handleCreateOrder = () => {
         onClose();
         // send the data to store
+        dispatch(clearCart());
+        dispatch(clearSessionItems());
         dispatch(setCustomerDetails({ name, phone, guests: guestCount }));
         navigate("/tables");
     }

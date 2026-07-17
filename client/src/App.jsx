@@ -1,10 +1,11 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { BrowserRouter as Router, Routes, Route, Outlet, Navigate, useLocation } from "react-router-dom"
 import { useSelector } from "react-redux"
 import { Landing, Home, Auth, Orders, Tables, Menu, NotFound, AccessDenied, Staff, Settings, Reports, MenuManagement } from "./pages"
 import Header from "./components/shared/Header"
 import Sidebar from "./components/shared/Sidebar"
 import { ROUTE_ACCESS } from "./constants/roles"
+import { apiRequest } from "./utils/api"
 
 const ProtectedRoute = ({ children }) => {
   const { user } = useSelector((state) => state.user)
@@ -39,6 +40,20 @@ const DashboardLayout = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
     return localStorage.getItem("sidebarCollapsed") === "true";
   });
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await apiRequest("/settings");
+        if (res.success && res.data && res.data.restaurantName) {
+          document.title = res.data.restaurantName;
+        }
+      } catch (error) {
+        console.error("Error fetching settings for page title:", error);
+      }
+    };
+    fetchSettings();
+  }, []);
 
   const toggleSidebar = () => {
     setIsSidebarCollapsed((prev) => {

@@ -143,12 +143,31 @@ const Bill = () => {
                 }
             } else {
                 // Processing final session payment checkout (Cashier/Admin)
-                if (!customerData.activeOrderId) {
-                    toast.error("No active session found to close.");
-                    return;
+                let targetSessionId = customerData.activeOrderId;
+
+                if (!targetSessionId) {
+                    // Create new Table Session first before paying
+                    const sessionRes = await apiRequest("/session", {
+                        method: "POST",
+                        body: {
+                            tableId: customerData.tableId,
+                            customerDetails: orderData.customerDetails,
+                            items: orderData.items,
+                            bills: orderData.bills,
+                            orderId: orderData.orderId
+                        }
+                    });
+
+                    if (sessionRes.success) {
+                        targetSessionId = sessionRes.data._id;
+                    } else {
+                        toast.error("Failed to create order session.");
+                        setIsSubmitting(false);
+                        return;
+                    }
                 }
 
-                const payRes = await apiRequest(`/session/${customerData.activeOrderId}/pay`, {
+                const payRes = await apiRequest(`/session/${targetSessionId}/pay`, {
                     method: "POST",
                     body: {
                         paymentMethod: orderData.paymentMethod,
