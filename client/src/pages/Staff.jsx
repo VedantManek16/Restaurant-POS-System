@@ -1,14 +1,16 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
 import { FaUserPlus, FaSearch, FaUserShield, FaTrash, FaUserTag } from "react-icons/fa";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "react-hot-toast";
 import { apiRequest } from "../utils/api";
+import { demoUsers } from "../constants";
 
 const Staff = () => {
   const { user } = useSelector((state) => state.user);
   const isSuperAdmin = user?.role === "Super Admin";
+  const isActualSuperAdmin = isSuperAdmin && (user?.email === "vedantmanek2026@gmail.com" || user?.name === "Vedant Manek");
 
   const [staffList, setStaffList] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -21,20 +23,46 @@ const Staff = () => {
     role: "Waiter",
     outlet: isSuperAdmin ? "Restro Main (Downtown)" : (user?.tenantName || "Restro Main")
   });
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchStaff = async () => {
       try {
         const res = await apiRequest("/user/staff");
         if (res.success) {
-          setStaffList(res.data);
+          if (isSuperAdmin && !isActualSuperAdmin) {
+            // Keep only Super Admins (Vedant Manek) and load mock users
+            const superAdmins = res.data.filter(s => s.role === "Super Admin");
+            const hasVedant = superAdmins.some(s => s.name.toLowerCase().includes("vedant") || s.email.toLowerCase().includes("vedant"));
+
+            const list = [];
+            if (hasVedant) {
+              list.push(...superAdmins);
+            } else {
+              // Inject Vedant Manek's Super Admin account
+              list.push({
+                _id: "super-admin-vedant",
+                name: "Vedant Manek",
+                email: "vedantmanek2026@gmail.com",
+                phone: "8369778126",
+                role: "Super Admin",
+                tenantName: "RestroDesk"
+              });
+            }
+            list.push(...demoUsers);
+            setStaffList(list);
+          } else {
+            setStaffList(res.data);
+          }
         }
       } catch (error) {
         console.error("Error fetching staff:", error);
+      } finally {
+        setIsLoading(false);
       }
     };
     fetchStaff();
-  }, []);
+  }, [isSuperAdmin, isActualSuperAdmin]);
 
   const handleAddStaff = async (e) => {
     e.preventDefault();
@@ -46,6 +74,30 @@ const Staff = () => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(newStaff.email)) {
       toast.error("Please enter a valid email address.");
+      return;
+    }
+
+    if (isSuperAdmin && !isActualSuperAdmin) {
+      // Mock local addition of a platform user
+      const mockNewUser = {
+        _id: `demo-user-${Date.now()}`,
+        name: newStaff.name,
+        email: newStaff.email,
+        phone: newStaff.phone,
+        role: newStaff.role,
+        tenantName: newStaff.outlet
+      };
+      setStaffList([mockNewUser, ...staffList]);
+      setShowAddModal(false);
+      setNewStaff({
+        name: "",
+        email: "",
+        phone: "",
+        password: "",
+        role: "Waiter",
+        outlet: "Restro Main (Downtown)"
+      });
+      toast.success(`${newStaff.name} added as ${newStaff.role} successfully!`);
       return;
     }
 
@@ -84,6 +136,12 @@ const Staff = () => {
   };
 
   const handleDeleteStaff = async (id, name) => {
+    if ((isSuperAdmin && !isActualSuperAdmin) && (id.startsWith("demo-") || id === "super-admin-vedant")) {
+      setStaffList(staffList.filter(s => s._id !== id));
+      toast.success(`Removed ${name} from staff registry.`);
+      return;
+    }
+
     try {
       const res = await apiRequest(`/user/staff/${id}`, {
         method: "DELETE"
@@ -99,9 +157,9 @@ const Staff = () => {
   };
 
   const filteredStaff = staffList.filter(s => {
-    const matchesSearch = s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          s.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          s.role.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      s.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      s.role.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesSearch;
   });
 
@@ -111,12 +169,12 @@ const Staff = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-            <FaUserShield className="text-yellow-400" /> 
+            <FaUserShield className="text-yellow-400" />
             {isSuperAdmin ? "Platform User Directory" : "Staff Management"}
           </h1>
           <p className="text-xs text-gray-400 mt-1">
-            {isSuperAdmin 
-              ? "View and manage all registered platform administrators, operators, and staff." 
+            {isSuperAdmin
+              ? "View and manage all registered platform administrators, operators, and staff."
               : `Manage access rights, account roles, and active employees for ${user?.tenantName || "your outlet"}.`}
           </p>
         </div>
@@ -164,7 +222,33 @@ const Staff = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
-                 {filteredStaff.map((staff) => (
+                {isLoading ? (
+                  Array.from({ length: 5 }).map((_, idx) => (
+                    <tr key={idx} className="animate-pulse">
+                      <td className="py-4 px-6">
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-full bg-neutral-800"></div>
+                          <div className="h-3 bg-neutral-800 rounded w-24"></div>
+                        </div>
+                      </td>
+                      <td className="py-4 px-6">
+                        <div className="flex flex-col gap-2">
+                          <div className="h-3 bg-neutral-800 rounded w-32"></div>
+                          <div className="h-2 bg-neutral-800 rounded w-20"></div>
+                        </div>
+                      </td>
+                      <td className="py-4 px-6">
+                        <div className="h-5 bg-neutral-800 rounded-full w-16"></div>
+                      </td>
+                      <td className="py-4 px-6">
+                        <div className="h-3 bg-neutral-800 rounded w-20"></div>
+                      </td>
+                      <td className="py-4 px-6 text-right">
+                        <div className="h-6 bg-neutral-800 rounded-lg w-6 ml-auto"></div>
+                      </td>
+                    </tr>
+                  ))
+                ) : filteredStaff.map((staff) => (
                   <tr key={staff._id} className="hover:bg-white/[0.02] transition-colors text-xs text-gray-300">
                     <td className="py-4 px-6 font-semibold text-white">
                       <div className="flex items-center gap-2">
@@ -181,15 +265,14 @@ const Staff = () => {
                       </div>
                     </td>
                     <td className="py-4 px-6">
-                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
-                        staff.role === "Super Admin" 
-                          ? "bg-purple-500/10 border-purple-500/30 text-purple-400" 
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${staff.role === "Super Admin"
+                          ? "bg-purple-500/10 border-purple-500/30 text-purple-400"
                           : staff.role === "Restaurant Admin"
-                          ? "bg-blue-500/10 border-blue-500/30 text-blue-400"
-                          : staff.role === "Cashier"
-                          ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
-                          : "bg-amber-500/10 border-amber-500/30 text-amber-400"
-                      }`}>
+                            ? "bg-blue-500/10 border-blue-500/30 text-blue-400"
+                            : staff.role === "Cashier"
+                              ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
+                              : "bg-amber-500/10 border-amber-500/30 text-amber-400"
+                        }`}>
                         <FaUserTag size={8} />
                         {staff.role}
                       </span>
@@ -233,7 +316,7 @@ const Staff = () => {
               <FaUserPlus className="text-yellow-400" />
               {isSuperAdmin ? "Register Platform User" : "Add Staff Member"}
             </h3>
-            
+
             <form onSubmit={handleAddStaff} className="space-y-4">
               <div>
                 <label className="block text-gray-400 text-[10px] font-semibold uppercase tracking-wider mb-1">

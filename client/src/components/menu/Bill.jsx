@@ -6,6 +6,7 @@ import { apiRequest } from "../../utils/api";
 import { toast } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import { generateInvoicePDF } from "../../utils/generateInvoice";
+import { printThermalReceipt } from "../../utils/printReceipt";
 
 function loadScript(src) {
     return new Promise((resolve) => {
@@ -35,11 +36,16 @@ const Bill = () => {
     const sessionItems = useSelector((state) => state.cart.sessionItems || []);
     const customerData = useSelector((state) => state.customer);
 
+    const [settings, setSettings] = useState(null);
+    const [showReceiptModal, setShowReceiptModal] = useState(false);
+    const [completedOrder, setCompletedOrder] = useState(null);
+
     useEffect(() => {
         const fetchTaxSettings = async () => {
             try {
                 const res = await apiRequest("/settings");
                 if (res.success && res.data) {
+                    setSettings(res.data);
                     if (res.data.taxRate !== undefined) {
                         setTaxPercent(res.data.taxRate);
                     }
@@ -53,6 +59,16 @@ const Bill = () => {
         };
         fetchTaxSettings();
     }, []);
+
+    const handleCloseReceiptModal = () => {
+        dispatch(clearCart());
+        dispatch(clearSessionItems());
+        dispatch(removeCustomerDetails());
+        setPaymentMethod(null);
+        setShowReceiptModal(false);
+        setCompletedOrder(null);
+        navigate("/tables");
+    };
 
     // Calculations: subtotal, tax, total consolidated for both placed and new cart items
     const cartSubtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
@@ -80,7 +96,12 @@ const Bill = () => {
             taxPercent,
             taxAmount,
             total: totalWithTax,
-            paymentMethod: payMethod
+            paymentMethod: payMethod,
+            logoUrl: settings?.logoUrl || "",
+            upiId: settings?.upiId || "",
+            upiName: settings?.upiName || "",
+            upiQrUrl: settings?.upiQrUrl || "",
+            serviceCharge: settings?.serviceCharge || 0
         });
     };
 
@@ -89,6 +110,31 @@ const Bill = () => {
             if (isKitchenOnly) {
                 // Placing new kitchen order tickets
                 let sessionRes;
+                if (!customerData.tableId) {
+                    // Takeaway order sent to kitchen: submit directly to /order
+                    sessionRes = await apiRequest("/order", {
+                        method: "POST",
+                        body: {
+                            orderId: orderData.orderId,
+                            customerDetails: orderData.customerDetails,
+                            bills: orderData.bills,
+                            items: orderData.items,
+                            table: null,
+                            paymentMethod: "Cash",
+                            orderStatus: "In Progress"
+                        }
+                    });
+                    if (sessionRes.success) {
+                        toast.success("Order sent to kitchen successfully!");
+                        dispatch(clearCart());
+                        dispatch(clearSessionItems());
+                        dispatch(removeCustomerDetails());
+                        setPaymentMethod(null);
+                        navigate("/tables");
+                    }
+                    return;
+                }
+
                 if (customerData.activeOrderId) {
                     // Append order to active Table Session
                     sessionRes = await apiRequest(`/session/${customerData.activeOrderId}/order`, {
@@ -143,49 +189,78 @@ const Bill = () => {
                 }
             } else {
                 // Processing final session payment checkout (Cashier/Admin)
-                let targetSessionId = customerData.activeOrderId;
-
-                if (!targetSessionId) {
-                    // Create new Table Session first before paying
-                    const sessionRes = await apiRequest("/session", {
+                let payRes;
+                if (!customerData.tableId) {
+                    // Takeaway order: submit directly to /order (marked as Completed and Paid)
+                    payRes = await apiRequest("/order", {
                         method: "POST",
                         body: {
-                            tableId: customerData.tableId,
+                            orderId: orderData.orderId,
                             customerDetails: orderData.customerDetails,
-                            items: orderData.items,
                             bills: orderData.bills,
-                            orderId: orderData.orderId
+                            items: orderData.items,
+                            table: null,
+                            paymentMethod: orderData.paymentMethod,
+                            paymentData: orderData.paymentData,
+                            orderStatus: "Completed"
                         }
                     });
+                } else {
+                    // Dine-in order: process via Table Session
+                    let targetSessionId = customerData.activeOrderId;
 
-                    if (sessionRes.success) {
-                        targetSessionId = sessionRes.data._id;
-                    } else {
-                        toast.error("Failed to create order session.");
-                        setIsSubmitting(false);
-                        return;
+                    if (!targetSessionId) {
+                        // Create new Table Session first before paying
+                        const sessionRes = await apiRequest("/session", {
+                            method: "POST",
+                            body: {
+                                tableId: customerData.tableId,
+                                customerDetails: orderData.customerDetails,
+                                items: orderData.items,
+                                bills: orderData.bills,
+                                orderId: orderData.orderId
+                            }
+                        });
+
+                        if (sessionRes.success) {
+                            targetSessionId = sessionRes.data._id;
+                        } else {
+                            toast.error("Failed to create order session.");
+                            setIsSubmitting(false);
+                            return;
+                        }
                     }
+
+                    payRes = await apiRequest(`/session/${targetSessionId}/pay`, {
+                        method: "POST",
+                        body: {
+                            paymentMethod: orderData.paymentMethod,
+                            paymentData: orderData.paymentData
+                        }
+                    });
                 }
 
-                const payRes = await apiRequest(`/session/${targetSessionId}/pay`, {
-                    method: "POST",
-                    body: {
-                        paymentMethod: orderData.paymentMethod,
-                        paymentData: orderData.paymentData
-                    }
-                });
-
-                if (payRes.success) {
-                    toast.success("Table session completed and payment processed!");
+                if (payRes && payRes.success) {
+                    toast.success("Order completed and payment processed!");
                     
-                    // Trigger PDF Invoice Auto Download
-                    triggerPDFInvoice(orderData.paymentMethod);
+                    // Capture final order data for receipt display
+                    const receiptInfo = {
+                        orderId: customerData.orderId || payRes.data?.orderId || "N/A",
+                        customerName: customerData.customerName || "Walk-in Customer",
+                        customerPhone: customerData.customerMobileNumber || "",
+                        guests: customerData.guests || 1,
+                        tableNumber: customerData.tableNumber || "Takeaway",
+                        items: [...sessionItems, ...cartItems],
+                        subtotal,
+                        taxPercent,
+                        taxAmount,
+                        total: totalWithTax,
+                        paymentMethod: orderData.paymentMethod,
+                        paymentData: orderData.paymentData || null
+                    };
 
-                    dispatch(clearCart());
-                    dispatch(clearSessionItems());
-                    dispatch(removeCustomerDetails());
-                    setPaymentMethod(null);
-                    navigate("/tables");
+                    setCompletedOrder(receiptInfo);
+                    setShowReceiptModal(true);
                 }
             }
         } catch (error) {
@@ -411,6 +486,171 @@ const Bill = () => {
                     </button>
                 </div>
             </div>
+
+            {/* Order Receipt Modal */}
+            {showReceiptModal && completedOrder && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[999] flex items-center justify-center p-4">
+                    <div className="bg-white text-gray-800 rounded-2xl w-full max-w-md p-6 shadow-2xl relative flex flex-col max-h-[85vh]">
+                        {/* Scrollable Content Area */}
+                        <div className="overflow-y-auto pr-1 select-text">
+                            {/* Green Check Mark */}
+                            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
+                                <svg
+                                    className="h-6 w-6 text-green-600"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    strokeWidth="3"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        d="M5 13l4 4L19 7"
+                                    />
+                                </svg>
+                            </div>
+
+                            <h2 className="text-center text-xl font-bold text-gray-900 font-sans">Order Receipt</h2>
+                            <p className="text-center text-xs text-gray-500 mt-1 font-sans">Thank you for your order!</p>
+                            
+                            <hr className="border-gray-200 my-4" />
+
+                            {/* Customer & Order Details */}
+                            <div className="space-y-1.5 text-xs text-gray-600 font-sans">
+                                <div className="flex justify-between">
+                                    <span className="font-semibold text-gray-700">Order ID:</span>
+                                    <span className="text-gray-900 font-medium">{completedOrder.orderId}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="font-semibold text-gray-700">Name:</span>
+                                    <span className="text-gray-900 font-medium">{completedOrder.customerName}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="font-semibold text-gray-700">Phone:</span>
+                                    <span className="text-gray-900 font-medium">{completedOrder.customerPhone || "N/A"}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="font-semibold text-gray-700">Guests:</span>
+                                    <span className="text-gray-900 font-medium">{completedOrder.guests}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="font-semibold text-gray-700">Table:</span>
+                                    <span className="text-gray-900 font-medium">
+                                        {completedOrder.tableNumber && completedOrder.tableNumber !== "Takeaway"
+                                            ? completedOrder.tableNumber
+                                            : "Takeaway"}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <hr className="border-gray-200 my-4" />
+
+                            {/* Items list */}
+                            <div className="space-y-3 font-sans">
+                                <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wider">Items Ordered</h3>
+                                <div className="space-y-2">
+                                    {completedOrder.items.map((item, index) => (
+                                        <div key={index} className="flex justify-between text-xs text-gray-700">
+                                            <span>
+                                                {item.name} <span className="text-gray-400 font-bold ml-1">x{item.quantity}</span>
+                                            </span>
+                                            <span className="font-semibold text-gray-900">₹{Number(item.price * item.quantity).toFixed(2)}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <hr className="border-gray-200 my-4" />
+
+                            {/* Totals */}
+                            <div className="space-y-1.5 text-xs text-gray-600 font-sans">
+                                <div className="flex justify-between">
+                                    <span>Subtotal:</span>
+                                    <span className="font-medium text-gray-900">₹{completedOrder.subtotal.toFixed(2)}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span>Tax ({completedOrder.taxPercent}%):</span>
+                                    <span className="font-medium text-gray-900">₹{completedOrder.taxAmount.toFixed(2)}</span>
+                                </div>
+                                <div className="flex justify-between text-sm font-bold text-gray-900 pt-1.5 border-t border-gray-100">
+                                    <span>Grand Total:</span>
+                                    <span>₹{completedOrder.total.toFixed(2)}</span>
+                                </div>
+                            </div>
+
+                            {/* Payment details */}
+                            <div className="mt-4 pt-3 border-t border-gray-100 text-xs text-gray-600 space-y-1 bg-gray-50 p-2.5 rounded-lg font-sans">
+                                <div className="flex justify-between">
+                                    <span className="font-semibold text-gray-700">Payment Method:</span>
+                                    <span className="text-gray-900 font-semibold">{completedOrder.paymentMethod}</span>
+                                </div>
+                                {completedOrder.paymentMethod === "Online" && (
+                                    <>
+                                        <div className="flex flex-col text-[10px] text-gray-500 mt-1">
+                                            <span className="font-semibold">Razorpay Order ID:</span>
+                                            <span className="break-all text-gray-700">{completedOrder.paymentData?.razorpay_order_id || "N/A"}</span>
+                                        </div>
+                                        <div className="flex flex-col text-[10px] text-gray-500 mt-1">
+                                            <span className="font-semibold">Razorpay Payment ID:</span>
+                                            <span className="break-all text-gray-700">{completedOrder.paymentData?.razorpay_payment_id || "N/A"}</span>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Action buttons footer */}
+                        <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-200 shrink-0 font-sans">
+                            <button
+                                onClick={() => printThermalReceipt(completedOrder, settings || {})}
+                                className="text-[#025cca] hover:text-[#025cca]/80 font-bold text-xs cursor-pointer flex items-center gap-1 active:scale-95 transition-transform"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                                </svg>
+                                Print Receipt
+                            </button>
+                            
+                            <button
+                                onClick={() => {
+                                    generateInvoicePDF({
+                                        restaurantName: settings?.restaurantName || restaurantName,
+                                        orderId: completedOrder.orderId,
+                                        customerName: completedOrder.customerName,
+                                        customerPhone: completedOrder.customerPhone,
+                                        tableNumber: completedOrder.tableNumber,
+                                        date: new Date().toLocaleString(),
+                                        items: completedOrder.items,
+                                        subtotal: completedOrder.subtotal,
+                                        taxPercent: completedOrder.taxPercent,
+                                        taxAmount: completedOrder.taxAmount,
+                                        total: completedOrder.total,
+                                        paymentMethod: completedOrder.paymentMethod,
+                                        logoUrl: settings?.logoUrl || "",
+                                        upiId: settings?.upiId || "",
+                                        upiName: settings?.upiName || "",
+                                        upiQrUrl: settings?.upiQrUrl || "",
+                                        serviceCharge: settings?.serviceCharge || 0
+                                    });
+                                }}
+                                className="text-[#025cca] hover:text-[#025cca]/80 font-bold text-xs cursor-pointer flex items-center gap-1 active:scale-95 transition-transform"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                </svg>
+                                Download Invoice
+                            </button>
+
+                            <button
+                                onClick={handleCloseReceiptModal}
+                                className="text-red-500 hover:text-red-700 font-bold text-xs cursor-pointer active:scale-95 transition-transform"
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

@@ -1,2 +1,7 @@
 # Ignore the analysis report
 restaurant_pos_analysis.md
+
+# Global ignores
+.env
+**/node_modules
+**/dist

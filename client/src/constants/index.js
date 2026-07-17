@@ -458,3 +458,46 @@ export const menus = [
   { id: 7, name: "Alcoholic Drinks", bgColor: "#b73e3e", icon: "🍺", items: alcoholicDrinks },
   { id: 8, name: "Salads", bgColor: "#5b45b0", icon: "🥗", items: salads }
 ];
+
+export const demoUsers = [
+  {
+    _id: "demo-user-1",
+    name: "Rohan Sharma",
+    email: "rohan@ramascafe.com",
+    phone: "+91 98765 00112",
+    role: "Restaurant Admin",
+    tenantName: "Ramas Cafe"
+  },
+  {
+    _id: "demo-user-2",
+    name: "Anjali Gupta",
+    email: "anjali@tastehub.com",
+    phone: "+91 98765 00113",
+    role: "Cashier",
+    tenantName: "Taste Hub"
+  },
+  {
+    _id: "demo-user-3",
+    name: "Vikram Singh",
+    email: "vikram@tastehub.com",
+    phone: "+91 98765 00114",
+    role: "Waiter",
+    tenantName: "Taste Hub"
+  },
+  {
+    _id: "demo-user-4",
+    name: "Priya Patel",
+    email: "priya@dominos.com",
+    phone: "+91 98765 00115",
+    role: "Restaurant Admin",
+    tenantName: "Domino's"
+  },
+  {
+    _id: "demo-user-5",
+    name: "Kabir Khan",
+    email: "kabir@sagar.com",
+    phone: "+91 98765 00116",
+    role: "Cashier",
+    tenantName: "Sagar Gaire"
+  }
+];

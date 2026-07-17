@@ -21,7 +21,7 @@ const OrderList = ({ order }) => {
                 {getInitials(customerName)}
             </div>
 
-            <div className="flex items-center justify-between w-full min-w-0">
+            <div className="grid grid-cols-[1fr_140px_110px] items-center w-full min-w-0 gap-4">
                 {/* Details */}
                 <div className="flex flex-col items-start min-w-0 pr-2">
                     <h1 className="text-[#f5f5f5] text-sm font-semibold tracking-wide truncate">{customerName}</h1>
@@ -29,14 +29,14 @@ const OrderList = ({ order }) => {
                 </div>
 
                 {/* Table Info */}
-                <div className="shrink-0">
-                    <span className="text-[#f6b100] text-[11px] font-medium border border-[#f6b100] rounded-md px-2 py-0.5 bg-[#f6b100]/5">
+                <div className="flex justify-center">
+                    <span className="text-[#f6b100] text-[11px] font-medium border border-[#f6b100] rounded-md px-2 py-0.5 bg-[#f6b100]/5 whitespace-nowrap">
                         Table No: {tableNo}
                     </span>
                 </div>
 
                 {/* Status Indicator */}
-                <div className="flex flex-col items-start gap-0.5 shrink-0 text-right">
+                <div className="flex flex-col items-end gap-0.5 shrink-0 text-right">
                     {isCancelled && (
                         <>
                             <p className="text-red-400 text-xs font-semibold flex items-center gap-1">

@@ -1,23 +1,20 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { FaChartBar, FaFileDownload, FaArrowUp, FaArrowDown, FaCalendarAlt } from "react-icons/fa";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "react-hot-toast";
 import { apiRequest } from "../utils/api";
 
-const MOCK_REPORTS = [
-  { id: "REP-01", name: "Daily Sales Summary (July 12)", date: "2026-07-12", size: "142 KB", type: "PDF" },
-  { id: "REP-02", name: "Weekly Performance Metrics", date: "2026-07-06", size: "1.2 MB", type: "CSV" },
-  { id: "REP-03", name: "Waiter Efficiency & Order Turnaround", date: "2026-06-30", size: "480 KB", type: "PDF" },
-  { id: "REP-04", name: "Menu Item Popularity Index", date: "2026-06-30", size: "820 KB", type: "CSV" },
-  { id: "REP-05", name: "Monthly Tax & Auditing Report", date: "2026-06-30", size: "2.4 MB", type: "PDF" }
+const REPORTS_LIST = [
+  { id: "REP-01", name: "Daily Sales Summary", type: "daily-sales", description: "All completed transactions and payment modes for today.", format: "CSV" },
+  { id: "REP-02", name: "Weekly Performance Metrics", type: "weekly-performance", description: "Consolidated sales totals and volumes grouped weekly.", format: "CSV" },
+  { id: "REP-03", name: "Monthly Tax & Auditing Report", type: "monthly-tax", description: "Audit logs of tax collected, rates, and subtotals for this month.", format: "CSV" }
 ];
 
 const Reports = () => {
   const [stats, setStats] = useState({
     sales: 0,
     count: 0,
-    avgTicket: 0,
-    avgPrep: 14.2
+    avgTicket: 0
   });
 
   useEffect(() => {
@@ -34,15 +31,54 @@ const Reports = () => {
     fetchAnalytics();
   }, []);
 
-  const handleDownload = (name) => {
-    toast.success(`Downloaded: ${name}`);
+  const handleDownload = async (reportType, reportName) => {
+    const loadId = toast.loading("Generating CSV report...");
+    try {
+      const res = await apiRequest(`/reports/data/${reportType}`);
+      
+      if (!res.success || !res.data || res.data.length === 0) {
+        toast.error("No record data found for this report period.", { id: loadId });
+        return;
+      }
+
+      const jsonArr = res.data;
+      const headers = Object.keys(jsonArr[0]);
+      
+      const csvRows = [];
+      csvRows.push(headers.join(",")); // Header row
+
+      for (const row of jsonArr) {
+        const values = headers.map(header => {
+          const val = row[header];
+          const escaped = ("" + (val !== undefined && val !== null ? val : "")).replace(/"/g, '""');
+          return escaped.includes(",") || escaped.includes("\n") ? `"${escaped}"` : escaped;
+        });
+        csvRows.push(values.join(","));
+      }
+
+      const csvString = csvRows.join("\n");
+      const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `${reportName.replace(/\s+/g, "_")}_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast.success("CSV Report downloaded successfully!", { id: loadId });
+
+    } catch (error) {
+      console.error("Error downloading report:", error);
+      toast.error(error.message || "Failed to generate report.", { id: loadId });
+    }
   };
 
   const metrics = [
     { title: "Net Sales Today", value: `₹${stats.sales.toFixed(2)}`, change: "+10.0%", positive: true, note: "live figures" },
     { title: "Average Ticket Size", value: `₹${stats.avgTicket.toFixed(2)}`, change: "+5.0%", positive: true, note: "live average" },
-    { title: "Billed Orders Today", value: stats.count.toString(), change: "+12.0%", positive: true, note: "live counter" },
-    { title: "Kitchen Prep Time", value: `${stats.avgPrep} min`, change: "-5.0%", positive: true, note: "order turnaround" }
+    { title: "Billed Orders Today", value: stats.count.toString(), change: "+12.0%", positive: true, note: "live counter" }
   ];
 
   return (
@@ -65,7 +101,7 @@ const Reports = () => {
       </div>
 
       {/* Overview Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-3 gap-4">
         {metrics.map((m, idx) => (
           <Card key={idx} className="bg-[#181818] border-white/5 p-4 flex flex-col justify-between">
             <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">{m.title}</span>
@@ -94,33 +130,32 @@ const Reports = () => {
               <thead>
                 <tr className="border-b border-white/5 text-[11px] font-bold text-gray-500 uppercase tracking-wider bg-black/10">
                   <th className="py-3 px-6">Report Name</th>
-                  <th className="py-3 px-6">Date Created</th>
-                  <th className="py-3 px-6">File Details</th>
+                  <th className="py-3 px-6">Description</th>
+                  <th className="py-3 px-6">File Type</th>
                   <th className="py-3 px-6 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
-                {MOCK_REPORTS.map((rep) => (
+                {REPORTS_LIST.map((rep) => (
                   <tr key={rep.id} className="hover:bg-white/[0.02] transition-colors text-xs text-gray-300">
                     <td className="py-4 px-6 font-semibold text-white">
                       {rep.name}
                     </td>
-                    <td className="py-4 px-6 text-gray-400 font-medium">
-                      {rep.date}
+                    <td className="py-4 px-6 text-gray-400 font-medium max-w-xs truncate">
+                      {rep.description}
                     </td>
                     <td className="py-4 px-6">
-                      <span className="text-gray-400 font-medium">{rep.size}</span>
-                      <span className="text-[10px] bg-[#262626] border border-white/10 px-1.5 py-0.5 rounded font-mono font-bold text-yellow-400 ml-2">
-                        {rep.type}
+                      <span className="text-[10px] bg-[#262626] border border-white/10 px-2 py-0.5 rounded font-mono font-bold text-yellow-400">
+                        {rep.format}
                       </span>
                     </td>
                     <td className="py-4 px-6 text-right">
                       <button
-                        onClick={() => handleDownload(rep.name)}
+                        onClick={() => handleDownload(rep.type, rep.name)}
                         className="bg-yellow-400 hover:bg-yellow-300 text-gray-950 px-3 py-1.5 rounded-lg text-[10px] font-bold inline-flex items-center gap-1 cursor-pointer transition-all active:scale-95"
                       >
                         <FaFileDownload size={10} />
-                        Download
+                        Download CSV
                       </button>
                     </td>
                   </tr>

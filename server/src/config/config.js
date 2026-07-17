@@ -8,7 +8,10 @@ const config = Object.freeze({
     accessTokenSecret: process.env.JWT_SECRET || "default_jwt_secret",
     razorpayKeyId: process.env.RAZORPAY_KEY_ID,
     razorpaySecretKey: process.env.RAZORPAY_KEY_SECRET,
-    razorpyWebhookSecret: process.env.RAZORPAY_WEBHOOK_SECRET
+    razorpyWebhookSecret: process.env.RAZORPAY_WEBHOOK_SECRET,
+    cloudinaryCloudName: process.env.CLOUDINARY_CLOUD_NAME,
+    cloudinaryApiKey: process.env.CLOUDINARY_API_KEY,
+    cloudinaryApiSecret: process.env.CLOUDINARY_API_SECRET
 });
 
 export default config;

@@ -5,6 +5,7 @@ import BottomNav from "../components/shared/BottomNav"
 import MiniCard from "../components/home/MiniCard"
 import RecentOrders from "../components/home/RecentOrders"
 import PopularDishes from "../components/home/PopularDishes"
+import RevenueChart from "../components/home/RevenueChart"
 import { BsCashCoin } from "react-icons/bs"
 import { GrInProgress } from 'react-icons/gr'
 import { FaBuilding, FaServer, FaUsers, FaCoins, FaEllipsisV } from "react-icons/fa"
@@ -30,36 +31,48 @@ const Home = () => {
       navigate("/orders");
     }
   }, [user, navigate]);
-  
+
   const [restaurants, setRestaurants] = useState(MOCK_RESTAURANTS);
   const [activeDropdownId, setActiveDropdownId] = useState(null);
   const dropdownRef = useRef(null);
   const [timeRange, setTimeRange] = useState("7");
+  const [isLoading, setIsLoading] = useState(!isSuperAdmin);
   const [analytics, setAnalytics] = useState({
     today: { sales: 0, count: 0, avgTicket: 0, avgPrep: 14.2, inProgress: 0 },
     allTime: { sales: 0, count: 0, avgTicket: 0 }
   });
 
-  const fetchAnalytics = async () => {
-    try {
-      const res = await apiRequest("/reports/analytics");
-      if (res.success && res.data) {
-        setAnalytics(res.data);
-      }
-    } catch (error) {
-      console.error("Error loading home metrics:", error);
-    }
-  };
-
   useEffect(() => {
+    const loadAnalytics = async () => {
+      try {
+        const res = await apiRequest("/reports/analytics");
+        if (res.success && res.data) {
+          setAnalytics(res.data);
+        }
+      } catch (error) {
+        console.error("Error loading home metrics:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
     if (!isSuperAdmin) {
-      fetchAnalytics();
+      loadAnalytics();
     }
   }, [isSuperAdmin]);
 
   const handleRefresh = async () => {
     if (!isSuperAdmin) {
-      await fetchAnalytics();
+      setIsLoading(true);
+      try {
+        const res = await apiRequest("/reports/analytics");
+        if (res.success && res.data) {
+          setAnalytics(res.data);
+        }
+      } catch (error) {
+        console.error("Error loading home metrics:", error);
+      } finally {
+        setIsLoading(false);
+      }
     }
     toast.success("Dashboard metrics refreshed!");
   };
@@ -163,13 +176,12 @@ const Home = () => {
                       <span className="text-gray-400 font-bold uppercase">{res.plan}</span>
                     </td>
                     <td className="py-4 px-6">
-                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
-                        res.status === "Active" 
-                          ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400" 
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${res.status === "Active"
+                          ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
                           : res.status === "Pending Approval"
-                          ? "bg-yellow-500/10 border-yellow-500/30 text-yellow-400 animate-pulse"
-                          : "bg-red-500/10 border-red-500/30 text-red-400"
-                      }`}>
+                            ? "bg-yellow-500/10 border-yellow-500/30 text-yellow-400 animate-pulse"
+                            : "bg-red-500/10 border-red-500/30 text-red-400"
+                        }`}>
                         {res.status}
                       </span>
                     </td>
@@ -188,15 +200,15 @@ const Home = () => {
                           <button onClick={() => { setActiveDropdownId(null); toast.success(`Editing settings for ${res.name}`); }} className="w-full text-left px-4 py-2 hover:bg-white/5 text-gray-300 hover:text-white transition-colors cursor-pointer text-xs font-semibold">
                             Edit Settings
                           </button>
-                          <button 
-                            onClick={() => { 
-                              setActiveDropdownId(null); 
+                          <button
+                            onClick={() => {
+                              setActiveDropdownId(null);
                               if (res.status === "Pending Approval") {
                                 approveRestaurant(res.id, res.name);
                               } else {
-                                toggleStatus(res.id, res.name, res.status); 
+                                toggleStatus(res.id, res.name, res.status);
                               }
-                            }} 
+                            }}
                             className={`w-full text-left px-4 py-2 hover:bg-white/5 transition-colors cursor-pointer text-xs font-bold ${res.status === "Active" ? "text-red-400 hover:text-red-300" : "text-emerald-400 hover:text-emerald-300"}`}
                           >
                             {res.status === "Active" ? "Suspend" : res.status === "Pending Approval" ? "Approve" : "Activate"}
@@ -219,19 +231,52 @@ const Home = () => {
   return (
     <section className="bg-[#1f1f1f] h-[calc(100vh-4rem)] overflow-hidden flex flex-col md:flex-row gap-3 pb-16 md:pb-0 select-none">
       {/* Left Div */}
-      <div className="flex-[3] flex flex-col min-w-0 overflow-hidden">
+      <div className="flex-[3] flex flex-col min-w-0 overflow-y-auto scrollbar-hide h-full pb-6">
         {isRestaurantAdmin ? (
-          <Greetings 
-            showDropdown={true} 
-            timeRange={timeRange} 
-            setTimeRange={setTimeRange} 
-            onRefresh={handleRefresh} 
+          <Greetings
+            showDropdown={true}
+            timeRange={timeRange}
+            setTimeRange={setTimeRange}
+            onRefresh={handleRefresh}
           />
         ) : (
           <Greetings />
         )}
 
-        {isRestaurantAdmin ? (
+        {isLoading ? (
+          isRestaurantAdmin ? (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 px-8 mt-5 animate-pulse">
+              <div className="bg-[#1a1a1a] p-5 rounded-2xl border border-white/5 min-h-[135px] flex flex-col justify-between">
+                <div className="h-3 bg-neutral-800 rounded w-1/3"></div>
+                <div className="h-8 bg-neutral-800 rounded w-2/3 mt-4"></div>
+                <div className="h-3 bg-neutral-800 rounded w-1/2 mt-2"></div>
+              </div>
+              <div className="bg-[#1a1a1a] p-5 rounded-2xl border border-white/5 min-h-[135px] flex flex-col justify-between">
+                <div className="h-3 bg-neutral-800 rounded w-1/3"></div>
+                <div className="h-8 bg-neutral-800 rounded w-2/3 mt-4"></div>
+                <div className="h-3 bg-neutral-800 rounded w-1/2 mt-2"></div>
+              </div>
+              <div className="bg-[#1a1a1a] p-5 rounded-2xl border border-white/5 min-h-[135px] flex flex-col justify-between">
+                <div className="h-3 bg-neutral-800 rounded w-1/3"></div>
+                <div className="h-8 bg-neutral-800 rounded w-2/3 mt-4"></div>
+                <div className="h-3 bg-neutral-800 rounded w-1/2 mt-2"></div>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 px-8 mt-5 animate-pulse">
+              <div className="bg-[#1a1a1a] p-5 rounded-2xl border border-white/5 min-h-[135px] flex flex-col justify-between">
+                <div className="h-3 bg-neutral-800 rounded w-1/3"></div>
+                <div className="h-8 bg-neutral-800 rounded w-2/3 mt-4"></div>
+                <div className="h-3 bg-neutral-800 rounded w-1/2 mt-2"></div>
+              </div>
+              <div className="bg-[#1a1a1a] p-5 rounded-2xl border border-white/5 min-h-[135px] flex flex-col justify-between">
+                <div className="h-3 bg-neutral-800 rounded w-1/3"></div>
+                <div className="h-8 bg-neutral-800 rounded w-2/3 mt-4"></div>
+                <div className="h-3 bg-neutral-800 rounded w-1/2 mt-2"></div>
+              </div>
+            </div>
+          )
+        ) : isRestaurantAdmin ? (
           /* Premium 3-column Grid for Restaurant Admin */
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 px-8 mt-5">
             {/* Card 1: Today's Revenue */}
@@ -296,6 +341,26 @@ const Home = () => {
             <MiniCard title="In Progress" icon={<GrInProgress />} number={analytics.today.inProgress} footerNum={3.6} trend="up" />
           </div>
         )}
+
+        {isRestaurantAdmin && (
+          isLoading ? (
+            <div className="mx-8 mt-6 bg-[#1a1a1a] border border-white/5 rounded-2xl p-6 h-[280px] animate-pulse flex flex-col justify-between">
+              <div className="h-4 bg-neutral-800 rounded w-1/4"></div>
+              <div className="h-32 bg-neutral-800/10 rounded w-full mt-4"></div>
+              <div className="flex justify-between w-full mt-4">
+                <div className="h-3 bg-neutral-800 rounded w-12"></div>
+                <div className="h-3 bg-neutral-800 rounded w-12"></div>
+                <div className="h-3 bg-neutral-800 rounded w-12"></div>
+              </div>
+            </div>
+          ) : (
+            <RevenueChart
+              hourlySales={analytics?.hourlySales || []}
+              dailyStastistics={analytics?.dailySales || []}
+            />
+          )
+        )}
+
         <RecentOrders />
       </div>
 

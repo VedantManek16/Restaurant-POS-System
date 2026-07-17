@@ -38,6 +38,26 @@ const settingsSchema = new mongoose.Schema({
     receiptFooter: {
         type: String,
         default: "Thank you for dining with us!"
+    },
+    logoUrl: {
+        type: String,
+        default: ""
+    },
+    upiId: {
+        type: String,
+        default: ""
+    },
+    upiName: {
+        type: String,
+        default: ""
+    },
+    upiQrUrl: {
+        type: String,
+        default: ""
+    },
+    gstNo: {
+        type: String,
+        default: ""
     }
 }, { timestamps: true });
 

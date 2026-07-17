@@ -14,6 +14,7 @@ const Tables = () => {
     const [showAddModal, setShowAddModal] = useState(false);
     const [newTableNo, setNewTableNo] = useState("");
     const [newTableSeats, setNewTableSeats] = useState(4);
+    const [isLoading, setIsLoading] = useState(true);
 
     const { user } = useSelector((state) => state.user);
     const isRestaurantAdmin = user?.role === "Restaurant Admin";
@@ -26,11 +27,16 @@ const Tables = () => {
             }
         } catch (error) {
             console.error("Error fetching tables:", error);
+        } finally {
+            setIsLoading(false);
         }
     };
 
     useEffect(() => {
-        fetchTables();
+        const load = async () => {
+            await fetchTables();
+        };
+        load();
     }, []);
 
     const handleAddTable = async (e) => {
@@ -102,18 +108,31 @@ const Tables = () => {
             {/* Grid container for TableCards */}
             <div className="flex-1 min-h-0 overflow-y-auto scrollbar-hide px-10 py-2">
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-12 justify-items-center">
-                    {filteredTables.map(table => (
-                        <TableCard
-                            key={table._id}
-                            id={table._id}
-                            name={table.tableNo}
-                            status={table.status}
-                            initials={table.currentOrder?.customerDetails?.name}
-                            seats={table.seats}
-                            currentOrder={table.currentOrder}
-                            onDelete={fetchTables}
-                        />
-                    ))}
+                    {isLoading ? (
+                        Array.from({ length: 8 }).map((_, idx) => (
+                            <div key={idx} className="bg-[#1a1a1a] border border-white/5 rounded-2xl p-5 w-full max-w-[280px] h-[130px] animate-pulse flex flex-col justify-between">
+                                <div className="flex justify-between items-center w-full">
+                                    <div className="h-4 bg-neutral-800 rounded w-1/3"></div>
+                                    <div className="h-4 bg-neutral-800 rounded-full w-12"></div>
+                                </div>
+                                <div className="h-3 bg-neutral-800 rounded w-1/2 mt-4"></div>
+                                <div className="h-3 bg-neutral-800 rounded w-1/4 mt-2"></div>
+                            </div>
+                        ))
+                    ) : (
+                        filteredTables.map(table => (
+                            <TableCard
+                                key={table._id}
+                                id={table._id}
+                                name={table.tableNo}
+                                status={table.status}
+                                initials={table.currentOrder?.customerDetails?.name}
+                                seats={table.seats}
+                                currentOrder={table.currentOrder}
+                                onDelete={fetchTables}
+                            />
+                        ))
+                    )}
                 </div>
             </div>
 
@@ -124,8 +143,8 @@ const Tables = () => {
                         <div>
                             <label className="block text-[11px] font-semibold text-[#ababab] uppercase tracking-wider mb-2">Table Number/Name</label>
                             <div className="flex items-center rounded-xl p-3 bg-[#141414] border border-[#2d2d2d]/80 focus-within:border-[#f6b100]/50 transition-colors">
-                                <input 
-                                    value={newTableNo} 
+                                <input
+                                    value={newTableNo}
                                     onChange={(e) => setNewTableNo(e.target.value)}
                                     type="text"
                                     placeholder="e.g. Table 16"
@@ -137,8 +156,8 @@ const Tables = () => {
                         <div>
                             <label className="block text-[11px] font-semibold text-[#ababab] uppercase tracking-wider mb-2">Capacity (Seats)</label>
                             <div className="flex items-center rounded-xl p-3 bg-[#141414] border border-[#2d2d2d]/80 focus-within:border-[#f6b100]/50 transition-colors">
-                                <input 
-                                    value={newTableSeats} 
+                                <input
+                                    value={newTableSeats}
                                     onChange={(e) => setNewTableSeats(e.target.value)}
                                     type="number"
                                     min="1"

@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { toast } from "react-hot-toast";
-import { User, Mail, Phone, Lock, UserPlus, Utensils, Coins, Shield, Store } from "lucide-react";
+import { User, Mail, Lock, UserPlus, Utensils, Coins, Store } from "lucide-react";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { apiRequest } from "../../utils/api";
 
@@ -84,7 +84,6 @@ const Register = ({ setIsRegister }) => {
     { name: "Waiter", icon: Utensils, desc: "Manage orders & tables" },
     { name: "Cashier", icon: Coins, desc: "Process payments & billing" },
     { name: "Restaurant Admin", icon: Store, desc: "Outlet settings & staff" },
-    { name: "Super Admin", icon: Shield, desc: "Full platform control" },
   ];
 
   return (

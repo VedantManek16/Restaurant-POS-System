@@ -6,7 +6,7 @@ import { verifyRole } from "../middleware/roleVerification.js";
 const router = express.Router();
 
 // Authentication Routes
-router.route("/register").post(isVerifiedUser, verifyRole(["Super Admin", "Restaurant Admin"]), register);
+router.route("/register").post(register);
 router.route("/login").post(login);
 router.route("/logout").post(isVerifiedUser, logout);
 

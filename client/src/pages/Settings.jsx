@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
-import { FaCog, FaStore, FaTools, FaBell, FaReceipt, FaLock } from "react-icons/fa";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { FaCog, FaStore, FaTools, FaReceipt, FaLock } from "react-icons/fa";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "react-hot-toast";
 import { apiRequest } from "../utils/api";
@@ -17,9 +17,44 @@ const Settings = () => {
     phone: "+91 98765 43210",
     currency: "INR",
     taxRate: 18,
-    serviceCharge: 5,
-    receiptFooter: "Thank you for dining with us!"
+    serviceCharge: 0,
+    receiptFooter: "Thank you for dining with us!",
+    logoUrl: "",
+    upiId: "",
+    upiName: "",
+    upiQrUrl: "",
+    gstNo: ""
   });
+
+  const handleLogoUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        toast.error("Logo file size should be less than 2MB.");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setSettings(prev => ({ ...prev, logoUrl: reader.result }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleQrUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        toast.error("QR Code file size should be less than 2MB.");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setSettings(prev => ({ ...prev, upiQrUrl: reader.result }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -57,7 +92,6 @@ const Settings = () => {
   const tabs = [
     { id: "outlet", label: "Outlet Settings", icon: FaStore },
     { id: "billing", label: "Billing & Receipts", icon: FaReceipt },
-    { id: "notifications", label: "Alerts & Kitchen", icon: FaBell },
     { id: "advanced", label: "Security & Keys", icon: FaLock }
   ];
 
@@ -143,6 +177,16 @@ const Settings = () => {
                       className="w-full bg-[#262626] border border-white/5 rounded-xl px-4 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-yellow-400/50"
                     />
                   </div>
+                  <div>
+                    <label className="block text-gray-400 text-[10px] font-semibold uppercase tracking-wider mb-1">GST Registration Number</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 22AAAAA0000A1Z5"
+                      value={settings.gstNo || ""}
+                      onChange={(e) => setSettings({ ...settings, gstNo: e.target.value })}
+                      className="w-full bg-[#262626] border border-white/5 rounded-xl px-4 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-yellow-400/50"
+                    />
+                  </div>
                 </div>
 
                 <div>
@@ -167,7 +211,7 @@ const Settings = () => {
               <form onSubmit={handleSave} className="space-y-4">
                 <div>
                   <h3 className="text-sm font-bold text-white mb-1">Billing Configurations</h3>
-                  <p className="text-[10px] text-gray-500 mb-4">Set store currency, default taxes, service charges, and receipt formats.</p>
+                  <p className="text-[10px] text-gray-500 mb-4">Set store currency, default taxes, branding logo, UPI details, and receipt formats.</p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -193,11 +237,22 @@ const Settings = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-gray-400 text-[10px] font-semibold uppercase tracking-wider mb-1">Default Service Charge (%)</label>
+                    <label className="block text-gray-400 text-[10px] font-semibold uppercase tracking-wider mb-1">UPI ID (Scan to Pay)</label>
                     <input
-                      type="number"
-                      value={settings.serviceCharge}
-                      onChange={(e) => setSettings({ ...settings, serviceCharge: Number(e.target.value) })}
+                      type="text"
+                      placeholder="e.g. tastehub@upi"
+                      value={settings.upiId || ""}
+                      onChange={(e) => setSettings({ ...settings, upiId: e.target.value })}
+                      className="w-full bg-[#262626] border border-white/5 rounded-xl px-4 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-yellow-400/50"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-gray-400 text-[10px] font-semibold uppercase tracking-wider mb-1">UPI Account Holder Name</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Ramas Cafe"
+                      value={settings.upiName || ""}
+                      onChange={(e) => setSettings({ ...settings, upiName: e.target.value })}
                       className="w-full bg-[#262626] border border-white/5 rounded-xl px-4 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-yellow-400/50"
                     />
                   </div>
@@ -212,21 +267,56 @@ const Settings = () => {
                   </div>
                 </div>
 
+                {/* Logo and QR Uploads */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                  <div className="bg-[#262626]/50 p-4 rounded-xl border border-white/5">
+                    <label className="block text-gray-400 text-[10px] font-semibold uppercase tracking-wider mb-2">Restaurant Logo</label>
+                    <div className="flex items-center gap-4">
+                      {settings.logoUrl && (
+                        <img
+                          src={settings.logoUrl}
+                          alt="Restaurant Logo"
+                          className="w-12 h-12 object-cover rounded-lg border border-white/10 bg-white/5 shrink-0"
+                        />
+                      )}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleLogoUpload}
+                        className="text-[10px] text-gray-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:font-semibold file:bg-[#333] file:text-white hover:file:bg-[#444] cursor-pointer"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="bg-[#262626]/50 p-4 rounded-xl border border-white/5">
+                    <label className="block text-gray-400 text-[10px] font-semibold uppercase tracking-wider mb-2">UPI QR Code Image</label>
+                    <div className="flex items-center gap-4">
+                      {settings.upiQrUrl && (
+                        <img
+                          src={settings.upiQrUrl}
+                          alt="UPI QR Code"
+                          className="w-12 h-12 object-cover rounded-lg border border-white/10 bg-white/5 shrink-0"
+                        />
+                      )}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleQrUpload}
+                        className="text-[10px] text-gray-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:font-semibold file:bg-[#333] file:text-white hover:file:bg-[#444] cursor-pointer"
+                      />
+                    </div>
+                  </div>
+                </div>
+
                 <div className="pt-2">
                   <Button type="submit" disabled={isSaving} className="bg-yellow-400 hover:bg-yellow-300 text-gray-950 font-bold text-xs px-6 py-2 rounded-xl cursor-pointer">
-                    {isSaving ? "Saving..." : "Save Tax Configuration"}
+                    {isSaving ? "Saving..." : "Save Configuration"}
                   </Button>
                 </div>
               </form>
             )}
 
-            {activeTab === "notifications" && (
-              <div className="text-center py-8">
-                <FaBell className="text-gray-600 text-3xl mx-auto mb-2" />
-                <h4 className="text-white text-xs font-bold mb-1">Kitchen & Alert System</h4>
-                <p className="text-[10px] text-gray-500 max-w-xs mx-auto">Notifications and sound setups for incoming orders and status updates are managed dynamically. Default: Enabled.</p>
-              </div>
-            )}
+
 
             {activeTab === "advanced" && (
               <div className="text-center py-8">

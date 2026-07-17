@@ -17,8 +17,8 @@ export const register = async (req, res, next) => {
         let finalTenantId = "";
 
         if (role === "Super Admin") {
-            finalTenantName = "RestroDesk";
-            finalTenantId = "restrodesk";
+            const error = createHttpError(403, "Public registration for Super Admin is disabled!");
+            return next(error);
         } else {
             if (!finalTenantName) {
                 const error = createHttpError(400, "Restaurant Name is required!");

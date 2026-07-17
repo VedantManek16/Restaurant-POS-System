@@ -1,4 +1,5 @@
 import MenuCategory from "../models/menuCategoryModel.js";
+import { uploadToCloudinary } from "../utils/cloudinary.js";
 
 // @desc    Get all menu categories and items for the restaurant
 // @route   GET /api/menu
@@ -99,12 +100,19 @@ export const addDish = async (req, res) => {
             return res.status(404).json({ success: false, message: "Category not found." });
         }
 
+        let uploadedImageUrl = "";
+        if (image && image.startsWith("data:image")) {
+            uploadedImageUrl = await uploadToCloudinary(image, "dishes");
+        } else {
+            uploadedImageUrl = image || "";
+        }
+
         category.items.push({
             name,
             price: Number(price),
             description: description || "",
             isVeg: isVeg !== undefined ? isVeg : true,
-            image: image || ""
+            image: uploadedImageUrl
         });
 
         await category.save();
@@ -136,7 +144,14 @@ export const editDish = async (req, res) => {
         if (price !== undefined) dish.price = Number(price);
         if (description !== undefined) dish.description = description;
         if (isVeg !== undefined) dish.isVeg = isVeg;
-        if (image !== undefined) dish.image = image;
+        
+        if (image !== undefined) {
+            if (image && image.startsWith("data:image")) {
+                dish.image = await uploadToCloudinary(image, "dishes");
+            } else {
+                dish.image = image;
+            }
+        }
 
         await category.save();
         res.status(200).json({ success: true, data: category });
